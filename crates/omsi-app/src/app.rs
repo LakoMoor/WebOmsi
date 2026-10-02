@@ -687,7 +687,9 @@ impl App {
                             if let (true, Some(d)) = (self.args.autostart, self.duty.as_mut()) {
                                 d.update(&mut p.vehicle, parse_time(&self.args.time));
                                 let (trip, stop) = d.trip_for_ibis();
-                                p.set_duty_destination(trip, stop);
+                                if p.auto_ibis {
+                                    p.set_duty_destination(trip, stop);
+                                }
                             }
                             if let Some(d) = self.duty.as_ref() {
                                 let mut fonts = w.fonts.lock();

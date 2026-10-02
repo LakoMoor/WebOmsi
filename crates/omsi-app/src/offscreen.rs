@@ -272,7 +272,9 @@ pub(crate) fn run_offscreen(
             if let Some(d) = duty.as_ref() {
                 // typed into the IBIS when the start-up has the electrics on
                 let (trip, stop) = d.trip_for_ibis();
-                p.set_duty_destination(trip, stop);
+                if p.auto_ibis {
+                    p.set_duty_destination(trip, stop);
+                }
             }
         }
     }

@@ -434,7 +434,9 @@ impl App {
                                 self.service_msg = Some((msg, 6.0));
                                 if let Some(d) = self.duty.as_ref() {
                                     let (trip, stop) = d.trip_for_ibis();
-                                    p.set_duty_destination(trip, stop);
+                                    if p.auto_ibis {
+                                        p.set_duty_destination(trip, stop);
+                                    }
                                 }
                             }
                         }

@@ -2171,7 +2171,9 @@ pub(crate) fn start_duty_at(app: &mut App, line: &str, tour: &str, trip: usize, 
     if let Some(p) = app.player.as_mut() {
         d.update(&mut p.vehicle, now);
         let (trip, stop) = d.trip_for_ibis();
-        p.set_duty_destination(trip, stop);
+        if p.auto_ibis {
+            p.set_duty_destination(trip, stop);
+        }
         if let Some(w) = app.world.as_ref() {
             let mut fonts = w.fonts.lock();
             if let Err(e) = crate::schedule_paper::update_vehicle(&mut p.vehicle, &d, &mut fonts) {
@@ -2193,7 +2195,9 @@ fn start_duty(app: &mut App, line: &str, tour: &str) {
             if let Some(p) = app.player.as_mut() {
                 d.update(&mut p.vehicle, now);
                 let (trip, stop) = d.trip_for_ibis();
-                p.set_duty_destination(trip, stop);
+                if p.auto_ibis {
+                    p.set_duty_destination(trip, stop);
+                }
                 let mut fonts = w.fonts.lock();
                 if let Err(e) = crate::schedule_paper::update_vehicle(
                     &mut p.vehicle,
