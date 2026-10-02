@@ -853,7 +853,14 @@ mod tests {
         std::fs::create_dir_all(&dir).unwrap();
         let osc = dir.join("g.osc");
         std::fs::write(&osc, script).unwrap();
-        let p = compile(&CompileInput { builtin_vars: vec!["Clutch".into()], scripts: vec![osc], ..Default::default() });
+        // (the script's own variables are in a varlist, as a bus has them: a store to an
+        // undeclared variable compiles to nothing)
+        let mut locals: Vec<&str> = ["(L.L.", "(S.L."].iter().flat_map(|p| script.split(p).skip(1)).filter_map(|t| t.split(')').next()).filter(|n| *n != "Clutch").collect();
+        locals.sort_unstable();
+        locals.dedup();
+        let vars = dir.join("vars.txt");
+        std::fs::write(&vars, locals.join("\n")).unwrap();
+        let p = compile(&CompileInput { builtin_vars: vec!["Clutch".into()], varlists: vec![vars], scripts: vec![osc], ..Default::default() });
         let _ = std::fs::remove_dir_all(&dir);
         p
     }

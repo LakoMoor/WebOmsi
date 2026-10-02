@@ -214,7 +214,10 @@ fn parse_axle(r: &mut omsi_cfg::CfgReader) -> Axle {
             "achse_feder" => a.spring = r.f32(),
             "achse_maxforce" => a.max_force = r.f32(),
             "achse_daempfer" => a.damper = r.f32(),
-            "achse_antrieb" => a.driven = r.bool(),
+            "achse_antrieb" => {
+                let w = r.word();
+                a.driven = w.parse::<f32>().map(|x| x != 0.0).unwrap_or(w.eq_ignore_ascii_case("true"));
+            }
             "achse_inertia_inv" => a.inertia_inv = r.f32(),
             _ => {
                 if omsi_cfg::keyword_of(l).is_some() || r.at_end() {
@@ -563,6 +566,13 @@ mod tests {
         assert_eq!((b.long, b.max_width, b.min_width, b.wheel_diameter, b.spring, b.max_force, b.damper, b.driven, b.inertia_inv), (-2.577, 2.4, 1.4, 1.023, 280.0, 116.0, 20.0, true, 0.015));
         assert_eq!(v.mass, 10.9);
         assert_eq!(v.cog, Some([0.0, 0.2, 0.8]));
+    }
+
+    #[test]
+    fn a_share_of_the_drive_is_a_driven_axle() {
+        let text = "[newachse]\nachse_long\n-2.9\nachse_antrieb\n0.2\n[newachse]\nachse_long\n2.9\nachse_antrieb\n0\n";
+        let v = Vehicle::parse(&CfgFile::from_str("x.bus", text));
+        assert_eq!(v.axles.iter().map(|a| a.driven).collect::<Vec<_>>(), vec![true, false]);
     }
 
     #[test]
