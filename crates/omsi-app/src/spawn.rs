@@ -441,6 +441,7 @@ pub(crate) fn spawn_player(
         take_change: false,
         toggled_up: Default::default(),
         momentary_gears: crate::settings::Settings::load().momentary_gears,
+        auto_ibis: crate::settings::Settings::load().auto_ibis,
         side_lights_by_l: false,
         driver: None,
         ibis_duty: None,

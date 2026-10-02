@@ -103,6 +103,9 @@ pub(crate) struct Player {
     pub(crate) toggled_up: hashbrown::HashSet<String>,
     /// H-pattern actions act as momentary gear buttons when this is enabled.
     pub(crate) momentary_gears: bool,
+    /// Setting `auto_ibis`: the game types a chosen line / route into the IBIS when a tour
+    /// starts. Off: nothing is entered automatically, manual input still works.
+    pub(crate) auto_ibis: bool,
     /// L switched the side lights on with the headlights (see
     /// [`Player::headlights_with_side_lights`]).
     pub(crate) side_lights_by_l: bool,

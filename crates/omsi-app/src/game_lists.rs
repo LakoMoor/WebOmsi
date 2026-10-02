@@ -989,6 +989,7 @@ fn toggle_now(app: &App, id: &str) -> Option<bool> {
         "mouse" => app.mouse_drive,
         "fps" => s.show_fps,
         "get_up" => s.get_up,
+        "auto_ibis" => s.auto_ibis,
         "time_sync" => s.time_sync,
         "metar_sync" => s.metar_sync,
         "camcoll" => s.camera_collision,
@@ -1093,6 +1094,13 @@ fn toggle_set(app: &mut App, id: &str, on: bool) -> Option<(&'static str, String
         "get_up" => {
             app.settings.get_up = on;
             Some(("get_up", bit))
+        }
+        "auto_ibis" => {
+            app.settings.auto_ibis = on;
+            if let Some(p) = app.player.as_mut() {
+                p.auto_ibis = on;
+            }
+            Some(("auto_ibis", bit))
         }
         // the real-time sync: the clock takes the device's date and time at once (a host's
         // clock runs at real time while it is on, at its time speed again after)
@@ -1647,6 +1655,7 @@ fn options_pages(app: &App) -> Vec<Page> {
         switch_row(app, "nav_arrows", "Route arrows (as in OMSI 2)", "Shows OMSI 2's route arrows over the road"),
         pick("navigator_corner", "Corner", later),
         switch_row(app, "get_up", "Ability to get up (Ctrl+Shift+G)", "Allows you to get out of the car and explore the world"),
+        switch_row(app, "auto_ibis", "Automatic IBIS", "When enabled, the selected tour is automatically entered into IBIS"),
         switch_row(app, "coll_objects", "Collisions with objects", "Enables/disables collisions with objects such as buildings, streetlights, etc."),
         switch_row(app, "coll_vehicles", "Collisions with vehicles", "Enables/Disables Collisions with Other Vehicles"),
         switch_row(app, "collision_pedestrians", "Collisions with people", "Enables/disables knocking down people"),
