@@ -279,6 +279,7 @@ impl crate::App {
             let _ = window.set_cursor_grab(winit::window::CursorGrabMode::Confined);
             window.set_cursor_visible(false);
         }
+        self.cursor_hidden = None;
     }
 
     pub(crate) fn finish_vr_nav_edit(&mut self) {
@@ -290,6 +291,7 @@ impl crate::App {
         self.mouse_look = false;
         self.hover_key = None;
         self.keys.clear();
+        self.cursor_hidden = None;
         #[cfg(windows)]
         self.reset_vr_pointer();
         if let Some(window) = self.window.as_ref() {

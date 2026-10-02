@@ -621,6 +621,66 @@ pub fn outline_crosses_itself(ring: &[DVec2]) -> bool {
     false
 }
 
+/// The outlines of a `[terrainhole]` cutter, seen from above (world x, y): its open rims,
+/// the edges only one face uses, chained into closed rings. OMSI 2 cuts the ground along an
+/// object's cutter as exactly as along a spline's outline, so a junction's ground ends at its
+/// kerb, not a texel short of it. A closed cutter (no rim) or a rim that branches gives no
+/// ring.
+/// Positions are the mesh's after `transform`, relative to `origin`.
+pub fn hole_mesh_outlines(mesh: &MeshData, transform: &Mat4, origin: DVec3) -> Vec<Vec<DVec2>> {
+    use std::collections::HashMap;
+    // (a model repeats a vertex for every face and UV seam: the corners by place, to the mm)
+    let key = |v: Vec3| ((v.x * 1000.0).round() as i64, (v.y * 1000.0).round() as i64, (v.z * 1000.0).round() as i64);
+    let mut place: HashMap<(i64, i64, i64), DVec2> = HashMap::new();
+    let mut edges: HashMap<((i64, i64, i64), (i64, i64, i64)), u32> = HashMap::new();
+    for t in mesh.indices.chunks_exact(3) {
+        let k = [0, 1, 2].map(|i| {
+            let v = mesh.positions[t[i] as usize];
+            let kv = key(v);
+            place.entry(kv).or_insert_with(|| origin.truncate() + transform.transform_point3(v).truncate().as_dvec2());
+            kv
+        });
+        if k[0] == k[1] || k[1] == k[2] || k[2] == k[0] {
+            continue;
+        }
+        for i in 0..3 {
+            let (a, b) = (k[i], k[(i + 1) % 3]);
+            *edges.entry(if a < b { (a, b) } else { (b, a) }).or_insert(0) += 1;
+        }
+    }
+    let mut next: HashMap<(i64, i64, i64), Vec<(i64, i64, i64)>> = HashMap::new();
+    for ((a, b), n) in &edges {
+        if *n == 1 {
+            next.entry(*a).or_default().push(*b);
+            next.entry(*b).or_default().push(*a);
+        }
+    }
+    if next.values().any(|v| v.len() != 2) {
+        return Vec::new();
+    }
+    let mut starts: Vec<_> = next.keys().copied().collect();
+    starts.sort_unstable();
+    let mut used = std::collections::HashSet::new();
+    let mut rings = Vec::new();
+    for s in starts {
+        if !used.insert(s) {
+            continue;
+        }
+        let (mut prev, mut cur) = (s, next[&s][0]);
+        let mut ring = vec![place[&s]];
+        while cur != s && used.insert(cur) {
+            ring.push(place[&cur]);
+            let n = &next[&cur];
+            let step = if n[0] == prev { n[1] } else { n[0] };
+            (prev, cur) = (cur, step);
+        }
+        if cur == s && ring.len() >= 3 {
+            rings.push(ring);
+        }
+    }
+    rings
+}
+
 /// The surface a spline's `[heightprofile]` segments describe, extruded along the curve like
 /// the drawn profile (the same cross-sections, the same skew): what vehicles and wheels stand
 /// on. OMSI keeps it apart from the graphics - a railway's third rail or a tunnel's walls are

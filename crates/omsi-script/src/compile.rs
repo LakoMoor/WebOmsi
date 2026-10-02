@@ -179,20 +179,36 @@ impl Program {
     }
 
     /// Whether the vehicle's gearbox is a manual one worked through gates (`kw_s_1`,
-    /// `kw_s_2` ...): it has the gates and either no automatic's `automatic_D`, or its first
-    /// gate asks for the clutch pedal (`{trigger:kw_s_1} (L.L.clutch) 1 = ...`). An
-    /// automatic whose scripts answer to the gate keys as well (gear hold, a dashboard's
-    /// display) and read a `Clutch` of their own somewhere (a torque converter's) is no
-    /// manual - taken for one, the automatic clutch of the settings worked its clutch at
-    /// every stop and pull-away.
+    /// `kw_s_2` ...): it has the gates and either no automatic's `automatic_D`, its first
+    /// gate asks for the clutch pedal (`{trigger:kw_s_1} (L.L.clutch) 1 = ...`), or the
+    /// first two gates write the engaged gear directly. Some manual buses share a cockpit
+    /// script that also exposes `automatic_D/N/R`, while their clutch is handled in the
+    /// gearbox frame rather than inside the gear trigger; those must still get the manual
+    /// touch controls. An automatic whose scripts merely answer to the gate keys for gear
+    /// hold or a dashboard display is not enough on its own.
     pub fn manual_gearbox(&self) -> bool {
-        let (Some(g1), true) = (self.trigger("kw_s_1").or_else(|| self.trigger("kw_s_1_fest")), self.trigger("kw_s_2").or_else(|| self.trigger("kw_s_2_fest")).is_some()) else { return false };
+        let (Some(g1), Some(g2)) = (
+            self.trigger("kw_s_1").or_else(|| self.trigger("kw_s_1_fest")),
+            self.trigger("kw_s_2").or_else(|| self.trigger("kw_s_2_fest")),
+        ) else {
+            return false;
+        };
         // (a script that reads OMSI's `AutoClutch` works a clutch of its own: the Sprinter
         // W906 MT, whose dashboard answers to `automatic_D` as well, #279)
         if self.trigger("automatic_D").is_none() || self.reads_sys(SysVar::AutoClutch) {
             return true;
         }
-        ["Clutch", "clutch_pedal"].iter().filter_map(|n| self.var(n)).any(|v| self.block_reads(g1, v))
+        if ["Clutch", "clutch_pedal"].iter().filter_map(|n| self.var(n)).any(|v| self.block_reads(g1, v)) {
+            return true;
+        }
+        // A manual may set the selected/engaged gear in the gate triggers themselves and
+        // read the clutch later in its frame macro. Requiring both first and second gear
+        // triggers to write the same gear variable avoids classifying an automatic that
+        // merely has kw_s_1/2 hold/display triggers as a manual.
+        ["antrieb_getr_gang", "antrieb_getr_aktugang"]
+            .iter()
+            .filter_map(|n| self.var(n))
+            .any(|v| self.block_sets(g1, v) && self.block_sets(g2, v))
     }
 
     /// Names (lower case, sorted) of the triggers that can set variable `name` (to anything
@@ -847,6 +863,11 @@ mod tests {
         // the LiAZ KPP: gates, the first one asks for the clutch
         let kpp = program_of("{trigger:kw_s_1} (L.L.Clutch) 1 = {if} 1 (S.L.g) {endif} {end}\n{trigger:kw_s_2} 2 (S.L.g) {end}\n");
         assert!(kpp.manual_gearbox());
+        // a manual bus can share cockpit code that also exposes automatic R/N/D. Its gear
+        // triggers select the actual gear directly, while the clutch is read later in the
+        // gearbox frame instead of inside kw_s_1.
+        let shared = program_of("{trigger:automatic_D} 1 (S.L.d) {end}\n{trigger:automatic_N} 0 (S.L.d) {end}\n{trigger:automatic_R} -1 (S.L.d) {end}\n{trigger:kw_s_1} 1 (S.L.antrieb_getr_gang) {end}\n{trigger:kw_s_2} 2 (S.L.antrieb_getr_gang) {end}\n{macro:gearbox_frame} (L.L.Clutch) (S.L.clutch_now) {end}\n");
+        assert!(shared.manual_gearbox());
         // an automatic with gear-hold keys and a torque converter's clutch elsewhere
         let auto = program_of("{trigger:automatic_D} 1 (S.L.d) {end}\n{trigger:kw_s_1} 1 (S.L.hold) {end}\n{trigger:kw_s_2} 2 (S.L.hold) {end}\n{macro:conv} (L.L.Clutch) (S.L.c) {end}\n");
         assert!(!auto.manual_gearbox());

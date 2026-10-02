@@ -196,6 +196,15 @@ impl ApplicationHandler for App {
             }
             WindowEvent::CursorMoved { position, .. } => {
                 if self.vr_nav_edit.is_some() { return; }
+                // (both physical pixels)
+                if let Some((x, y)) = self.cursor_hidden {
+                    if (position.x as f32 - x).abs() + (position.y as f32 - y).abs() > 8.0 {
+                        self.cursor_hidden = None;
+                        if let Some(win) = self.window.as_ref() {
+                            win.set_cursor_visible(true);
+                        }
+                    }
+                }
                 // (the on-screen controls on a computer, `OMSI_TOUCH=1`: the mouse is a
                 // finger on them - from #202)
                 if self.touch.enabled {
@@ -630,6 +639,30 @@ impl ApplicationHandler for App {
                 }
                 let analog = ctl.poll();
                 let actions = std::mem::take(&mut ctl.actions);
+                let moved = match (analog.steering, self.last_ctl_steer) {
+                    (Some(x), Some(x0)) => (x - x0).abs() > 0.02,
+                    _ => false,
+                };
+                if analog.steering.is_some() && (moved || self.last_ctl_steer.is_none()) {
+                    self.last_ctl_steer = analog.steering;
+                }
+                #[cfg(windows)]
+                let vr_on = self.vr.is_some();
+                #[cfg(not(windows))]
+                let vr_on = false;
+                let needs_mouse = self.mouse_drive
+                    || self.game_menu.is_some()
+                    || self.chooser.is_some()
+                    || self.list_kind.is_some()
+                    || self.navigator.as_ref().is_some_and(|n| n.map_open())
+                    || !matches!(self.view.as_str(), "driver" | "outside" | "pax");
+                let hide = (moved || actions.iter().any(|a| a.1)) && !needs_mouse && !vr_on;
+                if self.vr_nav_edit.is_none() && hide != self.cursor_hidden.is_some() && (hide || needs_mouse) {
+                    if let Some(win) = self.window.as_ref() {
+                        win.set_cursor_visible(!hide);
+                        self.cursor_hidden = hide.then_some(self.cursor);
+                    }
+                }
                 if let Some(n) = ctl.notice.take() {
                     self.service_msg = Some((n, 8.0));
                 }
@@ -638,11 +671,12 @@ impl ApplicationHandler for App {
                 // passenger view)
                 let driving = self.player.as_ref().filter(|_| matches!(self.view.as_str(), "driver" | "outside" | "pax") && !self.paused);
                 let kmh = driving.map(|p| p.vehicle.physics.velocity_kmh()).unwrap_or(0.0);
+                let wheel_bump = ctl.wheel_bump(driving.and_then(|p| p.vehicle.rigid.as_ref()), kmh, dt);
                 ctl.feedback(crate::controllers::FfInput {
                     on: driving.is_some(),
                     kmh,
                     lateral_accel: driving.and_then(|p| p.vehicle.rigid.as_ref()).map(|r| r.accel_body.x).unwrap_or(0.0),
-                    wheel_bump: driving.and_then(|p| p.vehicle.rigid.as_ref()).map(|r| crate::controllers::wheel_contact_bump(r, kmh)).unwrap_or(0.0),
+                    wheel_bump,
                     wheel_bump_age: 0.0,
                     vib_amp: driving.and_then(|p| p.vehicle.var("FF_Vib_Amp")).unwrap_or(0.0),
                     vib_period: driving.and_then(|p| p.vehicle.var("FF_Vib_Period")).unwrap_or(0.0),

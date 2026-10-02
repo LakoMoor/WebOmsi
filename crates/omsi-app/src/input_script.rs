@@ -247,7 +247,14 @@ impl App {
                 // switch the interior camera, below. (Where the arrows drive, `ours` skips this.)
                 let plain_arrow = matches!(code, KeyCode::ArrowLeft | KeyCode::ArrowRight) && !ctrl
                     && self.controllers.as_ref().is_some_and(|c| c.wheel_steering());
-                if let Some(scan) = keys::dik_code(code).filter(|_| !ours) {
+                // (the keys that fly the camera are the camera's, unmodified: S, OMSI's
+                // view_toggle_viewpoint, threw the free camera back to the driver's view,
+                // and with no bus of one's own every view flies - #868; a chord such as
+                // Ctrl+S, OMSI's quicksave, stays a [game] key)
+                let flying = m == 0
+                    && flies_free_camera(code)
+                    && (self.view == "free" || (self.player.is_none() && self.on_foot.is_none()));
+                if let Some(scan) = keys::dik_code(code).filter(|_| !ours && !flying) {
                     let action = self.game_keys.iter().find(|b| b.scan_code == scan && b.matches(m)
                         && !b.action.starts_with("vr_")
                         && !(plain_arrow && b.action.starts_with("view_interiorcam_"))).map(|b| b.action.clone());
@@ -536,8 +543,7 @@ impl App {
             let driving_key = covers_vehicle_key && !shift;
             // (the keys that fly the free camera are the camera's: W switched the wipers on
             // while flying)
-            let fly_key = self.view == "free"
-                && matches!(code, KeyCode::KeyW | KeyCode::KeyA | KeyCode::KeyS | KeyCode::KeyD | KeyCode::KeyQ | KeyCode::KeyE | KeyCode::Space | KeyCode::ShiftLeft | KeyCode::ArrowLeft | KeyCode::ArrowRight | KeyCode::ArrowUp | KeyCode::ArrowDown);
+            let fly_key = self.view == "free" && flies_free_camera(code);
             if let (Some(p), Some(scan)) = (
                 self.player.as_mut(),
                 keys::dik_code(code).filter(|_| !driving_key && !fly_key),
@@ -3311,7 +3317,7 @@ impl App {
     }
 
     pub(crate) fn update_hover(&mut self) {
-        if self.vr_nav_edit.is_some() {
+        if self.vr_nav_edit.is_some() || self.cursor_hidden.is_some() {
             self.hover = None;
             self.hover_part = None;
             self.hover_hand = false;
@@ -3669,6 +3675,11 @@ pub(crate) const GAME_MENU: [(&str, &str); 12] = [
     ("shot", "Screenshot"),
     ("quit", "End the session"),
 ];
+
+/// The keys that fly the free camera (and, with no bus of one's own, the view).
+pub(crate) fn flies_free_camera(code: KeyCode) -> bool {
+    matches!(code, KeyCode::KeyW | KeyCode::KeyA | KeyCode::KeyS | KeyCode::KeyD | KeyCode::KeyQ | KeyCode::KeyE | KeyCode::Space | KeyCode::ShiftLeft | KeyCode::ArrowLeft | KeyCode::ArrowRight | KeyCode::ArrowUp | KeyCode::ArrowDown)
+}
 
 /// `App::key_left_free` for a key's scan code.
 pub(crate) fn key_left_free(scan: Option<i32>, action: &str, own: &std::collections::HashSet<i32>, game: &[omsi_content::KeyBinding]) -> bool {

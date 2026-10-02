@@ -529,6 +529,8 @@ pub struct FfInput {
 }
 
 pub struct Controllers {
+    /// Each wheel's suspension travel, settled over a tenth of a second (see `wheel_bump`).
+    settled: Vec<f32>,
     devices: Devices,
     focused: bool,
     cfg: Vec<DeviceCfg>,
@@ -594,7 +596,7 @@ impl Controllers {
         for c in devices.connected() {
             log::info!("game controller: {} ({})", c.name, if cfg.iter().any(|d| names_match(&d.name, &c.name)) { "set up in gamectrler.cfg" } else if c.gamepad { "as a gamepad" } else { "not set up: its X axis steers" });
         }
-        Controllers { devices, focused: true, cfg, deadzone: 0.0, pedal_throttle: 1.0, pedal_brake: 1.0, disabled: Vec::new(), ff_invert: false, ff_enabled: true, steer_gain: 1.0, enabled: true, actions: Vec::new(), announced: Vec::new(), notice: None, steer: None, ff_t: 0.0, ff_lateral: 0.0, ff_bump: 0.0, ff_bump_age: 0.0, ff_source_logged: None, rumble: None, #[cfg(all(target_os = "linux", target_pointer_width = "64"))] wheel: None, #[cfg(all(target_os = "linux", target_pointer_width = "64"))] wheel_tried: None }
+        Controllers { settled: Vec::new(), devices, focused: true, cfg, deadzone: 0.0, pedal_throttle: 1.0, pedal_brake: 1.0, disabled: Vec::new(), ff_invert: false, ff_enabled: true, steer_gain: 1.0, enabled: true, actions: Vec::new(), announced: Vec::new(), notice: None, steer: None, ff_t: 0.0, ff_lateral: 0.0, ff_bump: 0.0, ff_bump_age: 0.0, ff_source_logged: None, rumble: None, #[cfg(all(target_os = "linux", target_pointer_width = "64"))] wheel: None, #[cfg(all(target_os = "linux", target_pointer_width = "64"))] wheel_tried: None }
     }
 
     /// A wheel or joystick steers the bus (then the arrow keys look around, as in OMSI:
@@ -864,15 +866,37 @@ impl Controllers {
 
 /// Front-wheel contact reaches the steering linkage directly; rear-wheel contact
 /// reaches it through the bus body at a lower strength.
-pub(crate) fn wheel_contact_bump(body: &omsi_sim::rigid::RigidBody, kmh: f32) -> f32 {
-    body.wheels.iter().enumerate().map(|(i, w)| {
-        let impact_speed = body.wheel_impacts.iter().filter(|hit| hit.obstacle == i).map(|hit| hit.speed).fold(0.0, f32::max);
-        bump_strength(w.compression_rate, impact_speed, kmh) * if w.steered { 1.0 } else { 0.55 }
-    }).fold(0.0, f32::max)
+impl Controllers {
+    /// The wheels' jolt this frame (None: not driving, the travel is settled anew on return).
+    pub(crate) fn wheel_bump(&mut self, body: Option<&omsi_sim::rigid::RigidBody>, kmh: f32, dt: f32) -> f32 {
+        let Some(body) = body else {
+            self.settled.clear();
+            return 0.0;
+        };
+        let travel: Vec<f32> = body.wheels.iter().map(|w| w.compression).collect();
+        let ripples = settle(&mut self.settled, &travel, dt);
+        body.wheels.iter().zip(ripples).enumerate().map(|(i, (w, ripple))| {
+            let impact_speed = body.wheel_impacts.iter().filter(|hit| hit.obstacle == i).map(|hit| hit.speed).fold(0.0, f32::max);
+            bump_strength(ripple, impact_speed, kmh) * if w.steered { 1.0 } else { 0.55 }
+        }).fold(0.0, f32::max)
+    }
 }
 
-fn bump_strength(compression_rate: f32, impact_speed: f32, kmh: f32) -> f32 {
-    let suspension = ((compression_rate.abs() - 0.12) / 0.9).clamp(0.0, 1.0);
+/// How far each wheel's travel leaves where it settled (a 1-2 cm road seam is no jolt).
+fn settle(settled: &mut Vec<f32>, travel: &[f32], dt: f32) -> Vec<f32> {
+    if settled.len() != travel.len() {
+        *settled = travel.to_vec();
+    }
+    let k = 1.0 - (-dt.max(0.0) / 0.1).exp();
+    travel.iter().zip(settled.iter_mut()).map(|(t, s)| {
+        let ripple = t - *s;
+        *s += ripple * k;
+        ripple
+    }).collect()
+}
+
+fn bump_strength(ripple: f32, impact_speed: f32, kmh: f32) -> f32 {
+    let suspension = ((ripple.abs() - 0.012) / 0.09).clamp(0.0, 1.0);
     let impact = ((impact_speed - 0.12) / 1.1).clamp(0.0, 1.0);
     suspension.max(impact) * (kmh.abs() / 4.0).clamp(0.0, 1.0)
 }
@@ -1607,10 +1631,36 @@ mod button_tests {
     fn wheel_bumps_need_motion_and_a_suspension_or_impact_event() {
         assert_eq!(super::bump_strength(0.0, 0.0, 20.0), 0.0);
         assert_eq!(super::bump_strength(1.0, 0.0, 0.0), 0.0);
-        assert_eq!(super::bump_strength(0.08, 0.08, 20.0), 0.0);
-        assert!(super::bump_strength(0.5, 0.0, 20.0) > 0.3);
-        assert!(super::bump_strength(1.0, 0.0, 20.0) > 0.5);
+        assert_eq!(super::bump_strength(0.008, 0.08, 20.0), 0.0);
+        assert!(super::bump_strength(0.015, 0.0, 20.0) < 0.05);
+        assert!(super::bump_strength(0.05, 0.0, 20.0) > 0.4);
+        assert!(super::bump_strength(0.1, 0.0, 20.0) > 0.9);
         assert!(super::bump_strength(0.0, 1.0, 20.0) > 0.5);
+    }
+
+    #[test]
+    fn settling_ignores_seams_and_keeps_slow_motion_as_it_was() {
+        let dt = 1.0 / 60.0;
+        let mut settled = Vec::new();
+        // the first frame (or the first back in the bus) starts from the travel as it is
+        assert_eq!(super::settle(&mut settled, &[0.09], dt), vec![0.0]);
+        // a 1.5 cm seam for one step
+        let seam = super::settle(&mut settled, &[0.105], dt)[0];
+        assert!(super::bump_strength(seam, 0.0, 20.0) < 0.05);
+        // a 6 cm step (a pothole's edge)
+        let mut settled = vec![0.0];
+        let step = super::settle(&mut settled, &[0.06], dt)[0];
+        assert!(super::bump_strength(step, 0.0, 20.0) > 0.45);
+        // brake dive at 0.3 m/s: about as strong as the old one-step rate made it
+        let mut settled = vec![0.0];
+        let mut travel = 0.0;
+        let mut ripple = 0.0;
+        for _ in 0..60 {
+            travel += 0.3 * dt;
+            ripple = super::settle(&mut settled, &[travel], dt)[0];
+        }
+        let old = (0.3 - 0.12) / 0.9;
+        assert!((super::bump_strength(ripple, 0.0, 20.0) - old).abs() < 0.05, "{ripple}");
     }
 
     /// Where the wheel plays the shaking as its own periodic effect, the force set each

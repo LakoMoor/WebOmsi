@@ -5069,6 +5069,14 @@ impl World {
                         for h in &ot.holes {
                             if !outside(&mesh_bounds(h, &pose.rot, pose.pos)) {
                                 ts.rasterize_hole(h, &pose.rot, pose.pos, tx, ty);
+                                // and cut exactly along its rim, as along a spline's outline:
+                                // by texel alone the ground stood a metre into the road at
+                                // the edges of a junction (Spandau, Bahnstr./Hansastr.)
+                                for ring in omsi_geometry::hole_mesh_outlines(h, &pose.rot, pose.pos) {
+                                    if !omsi_geometry::outline_crosses_itself(&ring) {
+                                        ts.add_outline(&ring, tx, ty);
+                                    }
+                                }
                             }
                         }
                         // An explicit cutter is independent of the object's render meshes.
