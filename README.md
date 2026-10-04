@@ -1,192 +1,167 @@
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="assets/logos/openomsi-wordmark-light.svg">
-    <img alt="openOMSI" src="assets/logos/openomsi-wordmark-dark.svg" width="420">
-  </picture>
-</p>
+<div align="center">
 
-<p align="center">
-  <a href="https://github.com/openOMSI-Project/openOMSI/releases/latest"><img alt="Version" src="https://img.shields.io/github/v/release/openOMSI-Project/openOMSI?label=version&color=f47f30&style=for-the-badge"></a>
-  <a href="https://github.com/openOMSI-Project/openOMSI/actions/workflows/release.yml"><img alt="Build" src="https://img.shields.io/github/actions/workflow/status/openOMSI-Project/openOMSI/release.yml?branch=main&style=for-the-badge&label=build"></a>
-  <a href="https://openomsi-project.github.io/openOMSI/"><img alt="Docs" src="https://img.shields.io/badge/docs-website-2d3138?style=for-the-badge"></a>
-  <a href="https://discord.gg/VG2EKVafYG"><img alt="Discord" src="https://img.shields.io/badge/discord-join%20us-5865F2?style=for-the-badge&logo=discord&logoColor=white"></a>
-  <a href="https://buymeacoffee.com/usonskyyy"><img alt="Buy me a coffee" src="https://img.shields.io/badge/buy%20me%20a%20coffee-support-ffdd00?style=for-the-badge&logo=buymeacoffee&logoColor=black"></a>
-  <a href="https://ko-fi.com/usonance"><img alt="Ko-fi" src="https://img.shields.io/badge/ko--fi-support-29abe0?style=for-the-badge&logo=kofi&logoColor=white"></a>
-  <a href="LICENSE"><img alt="License" src="https://img.shields.io/github/license/openOMSI-Project/openOMSI?style=for-the-badge"></a>
-</p>
+<img src="web/icon.svg" width="88" alt="WebOmsi">
 
-> [!WARNING]
-> **Early release. Expect bugs.** openOMSI is in an early stage of development: things may be
-> missing, broken or change between versions. Please report problems in
-> [Issues](https://github.com/openOMSI-Project/openOMSI/issues) or on our
-> [Discord server](https://discord.gg/VG2EKVafYG).
+# WebOmsi
 
-**openOMSI** is a from-scratch recreation of the bus simulator **OMSI 2**, written in Rust:
-64-bit, multithreaded, with a modern renderer (Metal / Vulkan / DirectX 12 through wgpu),
-and fully compatible with the existing maps, buses, scenery and mods.
+**A bus simulator that runs in your browser.**<br>
+Multiplayer, touch controls for phones, nothing to install.
 
-> [!IMPORTANT]
-> **openOMSI needs an original copy of OMSI 2.** It contains no game content of its own: it
-> plays on the maps, vehicles and other files of an installed OMSI 2 and **will not start without one**.
+[**▶ Play now**](https://lakomoor.github.io/WebOmsi/) &nbsp;·&nbsp; [Русская версия](README.ru.md) &nbsp;·&nbsp; [Engine docs](https://lakomoor.github.io/WebOmsi/engine/)
 
+![Rust](https://img.shields.io/badge/Rust-WebAssembly-f47f30?style=flat-square)
+![WebGPU](https://img.shields.io/badge/WebGPU-required-2d3138?style=flat-square)
+![Engine](https://img.shields.io/badge/engine-MIT-blue?style=flat-square)
+![Demo content](https://img.shields.io/badge/demo%20content-CC0-brightgreen?style=flat-square)
 
-## Download
+<img src="docs/webomsi/cab.png" width="820" alt="The driver's seat of the demo city bus">
 
-Every commit to `main` is built by GitHub Actions and published on the
-[**Releases**](https://github.com/openOMSI-Project/openOMSI/releases) page:
+</div>
 
-| Platform | File |
-| --- | --- |
-| Windows x64 / ARM64 | `openOMSI-<version>-windows-x64.zip` / `-windows-arm64.zip` - run `openomsi.exe` |
-| macOS (Apple silicon / Intel) | `openOMSI-<version>-macos-arm64.zip` / `-macos-x64.zip` - open `openOMSI.app` |
-| Linux x64 / ARM64 | `openOMSI-<version>-linux-x64.zip` / `-linux-arm64.zip` - run `openomsi` |
-| Android (arm64, 8.0+) | `openOMSI-<version>-android-arm64.apk` - see [docs/ANDROID.md](docs/ANDROID.md) |
-| Dedicated server | `openOMSI-<version>-server-linux-x64.zip` (also `-linux-arm64`, `-windows-x64`, `-windows-arm64`) - see [docs/SERVER.md](docs/SERVER.md) |
+WebOmsi is a fork of [openOMSI](https://github.com/openOMSI-Project/openOMSI), the Rust recreation of the
+bus simulator OMSI 2, ported to run in a web page. The simulation, the renderer, the script engine and the
+multiplayer protocol are the engine's own; what is new is everything that lets them live in a browser, and a
+small original game to play right away.
 
-Start the game, point the launcher to your OMSI 2 folder once, pick a map, a bus and a duty,
-and drive. Mods go into the folder next to the game (or through the launcher's **Mods**
-page); the original installation is never written to.
+## Play
 
-From 0.1.7 on the launcher updates itself: when a newer release is out it asks at the start
-and, with your yes, downloads it, replaces the program and starts again (on Android through
-the system's installer). Settings → General → Updates switches the check off or installs without
-asking.
+Open **<https://lakomoor.github.io/WebOmsi/>** in Chrome or Edge (on a phone: Chrome for Android), pick a
+bus and press **Play**. The first start downloads the engine (about 23 MB, 7 MB compressed); the demo content is
+160 KB. Both are cached by the browser.
 
-## Installation
+| | |
+|---|---|
+| <img src="docs/webomsi/menu.png" alt="Start screen"> | <img src="docs/webomsi/touch.png" alt="Touch controls"> |
+| A start screen in English and Russian, bus cards, graphics presets | Steering wheel, pedals, gearbox, doors, indicators and horn on the screen |
 
-**You need an installed OMSI 2** (Steam or retail, any version) with its stock content -
-the maps Grundorf and Berlin-Spandau and the stock buses (MAN SD200/SD202, NL). openOMSI
-brings no game content of its own; it plays the original's maps, buses and mods.
+**You need** a browser with [WebGPU](https://caniuse.com/webgpu): Chrome or Edge 113+ on a computer, Chrome on
+Android. Safari and Firefox are not supported yet (they ship WebGPU only in some versions).
 
-1. **Download** the file for your system from
-   [Releases](https://github.com/openOMSI-Project/openOMSI/releases) (table above) and unpack it
-   into a folder of its own that you can write to - your Documents, a games folder, or the
-   OMSI 2 folder itself. Not `Program Files`: the launcher could not update itself there.
-2. **Start it.**
-   * **Windows:** `openomsi.exe`. Windows SmartScreen may warn about an unknown app: *More
-     info* → *Run anyway*.
-   * **macOS:** open `openOMSI.app`. The first time, macOS may refuse an app from the
-     internet: right-click → *Open* → *Open*, or run
-     `xattr -dr com.apple.quarantine /path/to/openOMSI.app` once.
-   * **Linux:** `./openomsi` (run `chmod +x openomsi` if it does not start). It needs a
-     Vulkan or OpenGL driver (Mesa: `mesa-vulkan-drivers`, or your GPU vendor's driver).
-   * **Android:** see [docs/ANDROID.md](docs/ANDROID.md) - the OMSI 2 folder is copied onto the
-     phone first.
-3. **Point it at OMSI 2.** The launcher usually finds the installation by itself (Steam
-   libraries, the usual folders). If not, open **Setup** and choose the OMSI 2 folder - the
-   one with `Omsi.exe`, `maps` and `Vehicles` in it (the folder, or `Omsi.exe` itself) - and
-   press **Save**. The Steam version is under
-   `…\Steam\steamapps\common\OMSI 2`.
-4. **Drive:** pick a bus, a map and a duty on the **Drive** page and press **Start the duty**.
+### Controls
 
-**Mods** are installed on the **Mods** page (a folder or a `.zip`, or dropped on the window) or
-by putting them into the `Mods` folder next to the game; the OMSI 2 folder is never written
-to.
+| Keyboard | |
+|---|---|
+| `W` / `S` | gas / brake |
+| `A` / `D` | steering |
+| `Space` | parking brake |
+| `Shift+U` | start the bus (stock OMSI buses) |
+| `Shift+1` … | open and close doors |
+| `H` | horn |
+| `Z` `X` `C` | indicators, hazard lights |
+| `F1` … | cameras (cab, outside, passengers) |
+| `Esc` | game menu |
 
-### When something goes wrong
+On a touch screen the game draws its own controls: a steering wheel on the left, **BRAKE** and **GAS** on the
+right, buttons for the gearbox (**R N D**), doors, indicators, horn and parking brake (**P**). Drag with a finger to
+look around, pinch to zoom. Turn the phone sideways; the page asks for full screen by itself.
 
-* **"The original OMSI 2 was not found"** - choose the folder under Setup (step 3); the
-  message says what the chosen folder lacks.
-* **The game closes after a few seconds, or "the graphics device was lost"** - update the
-  graphics driver (NVIDIA, AMD or Intel's own, not the one Windows installs). On Windows you
-  can also switch to DirectX 12: Settings → Graphics → Graphics API (the launcher offers it after such a
-  crash).
-* **An older graphics card** (no Vulkan): openOMSI falls back to DirectX 12 and then OpenGL by
-  itself; Settings → Graphics → Graphics API chooses one.
-* **Stuck at a bridge or an invisible wall** on a mod map: Esc → Options → *Collisions with
-  objects* switches collisions with the map's objects off (Settings has it too).
-* **Multiplayer: you do not meet the others** - both players need the host's map (a map in
-  the OMSI 2 folder is not passed on; one from the Mods page is). The joining game switches
-  to the host's map by itself and says in the HUD when it is not installed.
-* **Keys do not do what you set:** Controls - the page shows which driving keys are in use;
-  a key you change there takes effect at once.
-* **Anything else:** when the game ends on an error, the launcher shows it with *Copy report*
-  and *Report on GitHub*. The logs are in `~/.openomsi` (Windows: `C:\Users\<you>\.openomsi`),
-  `game.log` for the last game.
+## The demo game
 
-## Goals
+The published page plays a small game that is original from the first byte: the village **Demo** (a loop of road,
+houses, trees, a bus stop) and three buses. Nothing in it comes from OMSI 2 or any other game: every texture, mesh,
+map file and script is generated by [`tools/public`](tools/public) from code, and dedicated to the public domain
+([CC0](https://creativecommons.org/publicdomain/zero/1.0/)).
 
-1. **1:1 behaviour.** Every content format of the original - maps, splines, scenery objects,
-   vehicles, scripts, timetables, HOF files, fonts, weather, tickets, situations, plugins -
-   loads and behaves exactly as in OMSI 2.2.032. Existing maps and mods work unchanged.
-2. **No original code or assets.** Nothing from the original is copied; the formats are
-   described in [docs/FORMATS.md](docs/FORMATS.md).
-3. **A better engine.** 64-bit address space, streaming and texture loading on worker threads,
-   no 2 GB limit, no single-thread stalls, LAN multiplayer and a dedicated server.
+| City bus | Minibus | Long bus |
+|---|---|---|
+| <img src="docs/webomsi/cab.png"> | <img src="docs/webomsi/mini.png"> | <img src="docs/webomsi/long.png"> |
+| 10.6 m, 170 kW | 7.4 m, 110 kW | 12.2 m, 210 kW |
 
-## Documentation
+The buses use real OMSI vehicle files (`.bus`, model config, `.o3d` meshes, `.osc` scripts), so the demo is also a
+small example of the formats. Rebuild it with `tools/public/build.sh`; change a number in
+[`gen_bus.py`](tools/public/gen_bus.py) and you have another bus.
 
-The full documentation is on the website: **https://openomsi-project.github.io/openOMSI/**. The same
-pages live in [`docs/`](docs):
+## Multiplayer
 
-| Document | What is in it |
-| --- | --- |
-| [User guide](docs/USER_GUIDE.md) | running, controls, launcher, settings, mods, LAN play, debug switches |
-| [Virtual reality](docs/VR.md) | OpenXR setup, VR settings and controls on Windows |
-| [Android](docs/ANDROID.md) | the mobile version: install, touch controls, building the APK |
-| [Modding](docs/MODDING.md) | limits lifted for modders: more interior lights, larger textures, additions OMSI 2 ignores |
-| [PBR materials](docs/PBR.md) | normal, roughness, metalness and occlusion maps for mods |
-| [Building](docs/BUILDING.md) | building from source on macOS, Windows, Linux and Android |
-| [Content formats](docs/FORMATS.md) | every OMSI 2 file format |
-| [Architecture](docs/ARCHITECTURE.md) | crates, threading, renderer, roadmap |
-| [Routes](docs/ROUTES.md) | how the original runs timetables, chrono, HOF, IBIS |
-| [Plugins](docs/PLUGINS.md) | Lua plugins (API and examples), OMSI plugin DLLs and the 32-bit plugin host |
-| [Dedicated server](docs/SERVER.md) | hosting a session without a window |
-| [Versioning & releases](docs/VERSIONING.md) | the `MAJOR.MINOR.COMMIT` scheme and the CI |
-| [Changelog](CHANGELOG.md) | what changed in each version |
+<img src="docs/webomsi/multiplayer.png" width="560" align="right" alt="Two browsers on one server">
 
-## Building from source
+Players meet on a **dedicated server**. A page cannot open a UDP socket, so it talks to the server's WebSocket
+gateway (`wss://…/ws`) instead; the server sees such a player like any other and the game protocol is unchanged.
+Everybody sees the others' buses, names and chat.
+
+Join: choose **Multiplayer** on the start screen and paste the address.
+
+Host (a computer with a few spare CPU cores is enough):
 
 ```sh
-git clone https://github.com/openOMSI-Project/openOMSI.git && cd openOMSI
-scripts/build-macos.sh        # macOS   → dist/macos/openOMSI.app
-scripts\build-windows.cmd     # Windows → dist\windows\openomsi.exe
-scripts/build-linux.sh        # Linux   → dist/linux/openomsi
-scripts/build-android.sh      # Android → dist/android/openOMSI-<version>.apk
-scripts/build-server.sh       # server  → dist/server
+# 1. build the game for your system (once)
+cargo build --release -p omsi-app
+# 2. make the demo content
+tools/public/build.sh
+# 3. start the server
+OMSI_TRIMMED_PACK=1 target/release/openomsi --root public-pack --server server.cfg
 ```
 
-Needs [Rust stable](https://rustup.rs) (1.85+) and the platform's C toolchain; details in
-[docs/BUILDING.md](docs/BUILDING.md).
+The first start writes `server.cfg`; set `map = maps/Demo/global.cfg`, and `tunnel = 1` if you have no public
+address: the server then opens a free Cloudflare tunnel and prints an `https://….trycloudflare.com` address for the
+players (a page served over https needs a `wss://` address, and a tunnel gives one). More in
+[docs/SERVER.md](docs/SERVER.md). You can list your servers for the start screen in
+[`web/config.json`](web/config.json) (`"servers": [{ "name": "…", "url": "wss://…" }]`).
 
-## Repository layout
+<br clear="right">
 
+## Your own OMSI 2 content
+
+The engine plays the maps and buses of OMSI 2 and its mods. That content is not ours to give away, so it is never
+part of the site. If you own OMSI 2 you can play it in your own browser:
+
+1. make a pack (a zip with the folders `maps`, `Vehicles`, `Sceneryobjects`, `Splines`, `Texture`… of the map and
+   buses you want; the [`tools`](tools) show how a pack can be trimmed from 8 GB to a few hundred MB),
+2. open the page with `?config=config-omsi.json` (copy [`web/config-omsi.json`](web/config-omsi.json) next to it
+   and name your map and buses), and choose the zip once: it stays in the browser's own storage and is never sent
+   anywhere.
+
+Please do not publish OMSI 2's files. WebOmsi is not affiliated with the makers of OMSI 2.
+
+## Build it yourself
+
+You need [Rust](https://rustup.rs) (the toolchain `1.97.1`: `rustup toolchain install 1.97.1`), its WebAssembly
+target, `wasm-bindgen` and Python 3.
+
+```sh
+rustup target add wasm32-unknown-unknown --toolchain 1.97.1
+cargo +1.97.1 install wasm-bindgen-cli --version 0.2.128 --locked
+
+tools/public/build.sh          # the demo content -> web/demo-pack.zip
+./build-web.sh                 # the game for the browser -> web/pkg   (about 6 minutes)
+cd web && python3 -m http.server 8080
 ```
-openOMSI/
-├── VERSION            MAJOR.MINOR of the next release (edited by hand)
-├── crates/            the engine, one crate per subsystem of the original
-│   ├── omsi-app/        the game binary `openomsi` (window, launcher, HUD, server mode)
-│   ├── omsi-launcher-core/  launcher data side + `openomsi-launcher` terminal tool
-│   ├── omsi-cfg/        text files, code pages, virtual file system, content roots
-│   ├── omsi-script/     the OMSI script language (compiler + VM)
-│   ├── omsi-o3d/ omsi-model/ omsi-texture/ omsi-geometry/   meshes, models, textures, splines
-│   ├── omsi-map/ omsi-scenery/ omsi-timetable/ omsi-vehicle/ omsi-content/   content formats
-│   ├── omsi-sim/        vehicles, AI traffic, people, physics
-│   ├── omsi-render/     the wgpu renderer
-│   ├── omsi-audio/ omsi-net/ omsi-plugin/ omsi-ui/   sound, multiplayer, plugins, UI toolkit
-├── tools/             developer tools: omsi-check (format coverage)
-├── scripts/           build scripts for every platform, version.sh, packaging files
-├── assets/            fonts, Material icons, app icons (assets/icons/app), logos (assets/logos)
-├── docs/              documentation (also published as the website)
-├── site/              the GitHub Pages website
-└── .github/workflows/ CI: release builds for every commit, the website
-```
 
-## Contributing
+Open <http://localhost:8080>. Add `?touch=1` to try the touch controls on a computer, `?server=wss://…/ws` to join a
+server, `?quality=low` for the light graphics preset.
 
-Issues and pull requests are welcome - see [CONTRIBUTING.md](CONTRIBUTING.md).
+**Publishing your own copy** takes three steps: fork this repository, set *Settings → Pages → Source* to
+*GitHub Actions*, push to `main`. [`pages.yml`](.github/workflows/pages.yml) builds the game and the demo content and
+publishes the page at `https://<you>.github.io/<repo>/`.
 
-## Support
+## How it works
 
-openOMSI is made in free time. If you enjoy it and want to help it along, you can buy me a
-coffee or support it on Ko-fi - thank you!
+The web port is a set of changes to the engine, none of which changes what the desktop game does:
 
-<p>
-  <a href="https://buymeacoffee.com/usonskyyy"><img alt="Buy me a coffee" src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" height="48"></a>
-  <a href="https://ko-fi.com/usonance"><img alt="Support me on Ko-fi" src="https://storage.ko-fi.com/cdn/kofi2.png?v=3" height="48"></a>
-</p>
+| Problem in a browser | What WebOmsi does |
+|---|---|
+| No file system | The game's files are one zip held in memory and mounted as a folder (`omsi_cfg::vfs::mount_zip_memory`). |
+| GPU setup is asynchronous | `web::start` opens the WebGPU device first, then runs the winit event loop on the page's canvas. |
+| No threads | Tile loading, sky computation and texture work run inline; rayon pools use the page's own thread. |
+| No UDP | `omsi_net::Socket` is UDP on a computer and a WebSocket in a page; the session code is unchanged. |
+| No audio device | cpal's Web Audio backend. |
+| Chrome's strict WGSL | The shaders are checked by Tint; derivatives in non-uniform flow are allowed explicitly. |
+| `Instant`, process ids, sleeping | `web-time`, `omsi_cfg::pid()`, `omsi_cfg::sleep()`. |
+| Native-only dependencies (plugins, updater, clipboard, file dialogs) | Stand-in crates and `cfg(target_arch = "wasm32")` gates; the launcher compiles but is not used. |
 
-## License
+The engine, the crates and the format documentation ([docs/FORMATS.md](docs/FORMATS.md)) are upstream's.
 
-openOMSI is released under the [MIT License](LICENSE). OMSI and OMSI 2 are trademarks of their
-respective owners. openOMSI is an independent project and is not affiliated with them.
+## Known limits
+
+* One thread: loading the map takes a few seconds, during which the page does not respond.
+* The first frame compiles shaders; on some systems Chrome's shader compiler fails under load and the game falls back
+  to rendering without multisampling.
+* The demo has no AI traffic and no passengers; the engine supports both for maps that define them.
+* Plugins (Lua and DLL), Discord, Steam, VR and the launcher are desktop-only.
+
+## Credits and licence
+
+* The engine: [openOMSI](https://github.com/openOMSI-Project/openOMSI) by its contributors (MIT).
+* The web port and the demo content: this repository. Code is MIT (see [LICENSE](LICENSE)); the files in `tools/public`
+  generate content released under CC0.
+* *OMSI 2* is a product of its makers; its content is not included here.

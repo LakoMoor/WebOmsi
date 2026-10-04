@@ -14,3 +14,13 @@ node_modules/
 /android/debug.keystore
 /android/build
 tools/greenteaspeak-plugin/*.zip
+
+# WebOmsi: generated and private files (OMSI 2 content must never be published)
+/pack/
+/public-pack/
+/server/
+/web/pkg/
+/web/pack.zip
+/web/demo-pack.zip
+/web/config-omsi.json.local
+.DS_Store
