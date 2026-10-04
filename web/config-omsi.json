@@ -1,0 +1,35 @@
+{
+  "packUrl": "./pack.zip",
+  "map": "maps/Grundorf/global.cfg",
+  "title": "Grundorf",
+  "buses": [
+    {
+      "file": "Vehicles/MAN_SD202/MAN_D86.bus",
+      "name": "MAN SD202",
+      "info": "Double-decker",
+      "color": "#e6c63c",
+      "stripe": "#222",
+      "length": 11.5,
+      "kw": 180
+    },
+    {
+      "file": "Vehicles/MAN_NL_NG/MAN_EN92_main.bus",
+      "name": "MAN NL/NG",
+      "info": "Low floor",
+      "color": "#e6c63c",
+      "stripe": "#222",
+      "length": 12,
+      "kw": 170
+    },
+    {
+      "file": "Vehicles/MB_O305/O305_E2H_84.bus",
+      "name": "Mercedes O305",
+      "info": "The classic",
+      "color": "#e6c63c",
+      "stripe": "#222",
+      "length": 11,
+      "kw": 150
+    }
+  ],
+  "servers": []
+}

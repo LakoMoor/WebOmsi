@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0e1116">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="description" content="WebOmsi: a bus simulator that runs in your browser. Multiplayer, touch controls, no install.">
+<title>WebOmsi</title>
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="game" tabindex="0"></canvas>
+
+<!-- in-game toolbar -->
+<div id="bar" class="toolbar" hidden>
+  <button id="b-help" data-i18n-title="help" title="Controls">?</button>
+  <button id="b-fs" data-i18n-title="fullscreen" title="Full screen">⛶</button>
+  <button id="b-exit" data-i18n-title="exit" title="Back to menu">✕</button>
+</div>
+<div id="help" class="sheet" hidden>
+  <div class="sheet-card">
+    <h2 data-i18n="controls">Controls</h2>
+    <div class="only-kbd" id="help-kbd"></div>
+    <div class="only-touch" id="help-touch"></div>
+    <button id="help-close" class="btn secondary" data-i18n="close">Close</button>
+  </div>
+</div>
+<div id="rotate" hidden><div><span>↻</span><p data-i18n="rotate">Turn your phone sideways</p></div></div>
+<div id="toast" class="toast" hidden></div>
+
+<!-- start screen -->
+<main id="menu">
+  <div class="scenery" aria-hidden="true">
+    <div class="sun"></div>
+    <svg class="hills" viewBox="0 0 1200 300" preserveAspectRatio="none"><path d="M0 220 Q 200 120 420 200 T 820 170 T 1200 200 V300 H0Z" fill="#14301f"/><path d="M0 260 Q 260 190 520 250 T 1200 240 V300 H0Z" fill="#0f2418"/></svg>
+    <div class="road"><i></i><i></i><i></i><i></i><i></i></div>
+    <div class="drive-bus" id="art-bus"></div>
+  </div>
+
+  <section class="panel" id="panel">
+    <header class="brand">
+      <div class="logo"><svg viewBox="0 0 48 48"><rect x="4" y="10" width="40" height="26" rx="6" fill="#fff"/><rect x="8" y="15" width="32" height="10" rx="2" fill="#f47f30"/><circle cx="15" cy="38" r="4.5" fill="#14171c" stroke="#fff" stroke-width="2"/><circle cx="33" cy="38" r="4.5" fill="#14171c" stroke="#fff" stroke-width="2"/></svg></div>
+      <div>
+        <h1>Web<b>Omsi</b></h1>
+        <p id="subtitle" data-i18n="tagline">A bus simulator in your browser</p>
+      </div>
+      <button id="lang" class="chip" title="Language">RU</button>
+    </header>
+
+    <div class="seg" role="tablist">
+      <button id="tab-solo" class="on" role="tab" data-i18n="solo">Single player</button>
+      <button id="tab-multi" role="tab" data-i18n="multi">Multiplayer</button>
+    </div>
+
+    <h3 data-i18n="pick_bus">Choose a bus</h3>
+    <div id="buses" class="buses"></div>
+
+    <div class="row">
+      <div class="field">
+        <label for="name" data-i18n="name">Your name</label>
+        <input id="name" type="text" maxlength="24" autocomplete="nickname" data-i18n-ph="name_ph" placeholder="Driver">
+      </div>
+      <div class="field">
+        <label for="quality" data-i18n="quality">Graphics</label>
+        <select id="quality">
+          <option value="high" data-i18n="q_high">High</option>
+          <option value="low" data-i18n="q_low">Light</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="multi" class="field" hidden>
+      <label for="server" data-i18n="server">Server address</label>
+      <input id="server" type="text" placeholder="wss://….trycloudflare.com/ws" autocapitalize="off" autocorrect="off" spellcheck="false">
+      <div id="server-list" class="chips"></div>
+    </div>
+
+    <div id="packbox" hidden>
+      <label class="btn secondary" for="packfile" data-i18n="pick_pack">Choose pack.zip…</label>
+      <input id="packfile" type="file" accept=".zip" hidden>
+      <small data-i18n="pack_note">The pack is made from your own copy of OMSI 2 and stays in your browser.</small>
+    </div>
+
+    <button id="go" class="btn primary" data-i18n="play">Play</button>
+
+    <div id="progress" hidden>
+      <div class="track" id="track"><i id="fill"></i></div>
+      <ol id="steps"></ol>
+      <p id="status"></p>
+    </div>
+    <p id="error" class="error" hidden></p>
+
+    <details class="how">
+      <summary data-i18n="controls">Controls</summary>
+      <div class="only-kbd" id="how-kbd"></div>
+      <div class="only-touch" id="how-touch"></div>
+    </details>
+
+    <footer>
+      <a href="https://github.com/LakoMoor/WebOmsi" target="_blank" rel="noopener">GitHub</a>
+      <span>·</span>
+      <a href="engine/" data-i18n="engine">About the engine</a>
+      <span id="forget-sep" hidden>·</span>
+      <button id="forget" class="link" hidden data-i18n="forget">Clear saved files</button>
+    </footer>
+  </section>
+</main>
+<script type="module" src="./main.js"></script>
+</body>
+</html>

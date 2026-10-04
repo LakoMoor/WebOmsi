@@ -1,0 +1,35 @@
+{
+  "packUrl": "./demo-pack.zip",
+  "map": "maps/Demo/global.cfg",
+  "title": "Demo village",
+  "buses": [
+    {
+      "file": "Vehicles/DemoBus/demo_city.bus",
+      "name": "City bus",
+      "info": "The all-rounder",
+      "color": "#ecbe28",
+      "stripe": "#be2824",
+      "length": 10.6,
+      "kw": 170
+    },
+    {
+      "file": "Vehicles/DemoBus/demo_mini.bus",
+      "name": "Minibus",
+      "info": "Light and quick",
+      "color": "#346ebe",
+      "stripe": "#f0f0f4",
+      "length": 7.4,
+      "kw": 110
+    },
+    {
+      "file": "Vehicles/DemoBus/demo_long.bus",
+      "name": "Long bus",
+      "info": "Powerful, 6 seat rows",
+      "color": "#3c965a",
+      "stripe": "#f5f5f5",
+      "length": 12.2,
+      "kw": 210
+    }
+  ],
+  "servers": []
+}
