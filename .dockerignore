@@ -1,0 +1,7 @@
+target
+pack
+public-pack
+web/pkg
+web/*.zip
+.git
+server

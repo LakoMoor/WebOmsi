@@ -75,30 +75,20 @@ small example of the formats. Rebuild it with `tools/public/build.sh`; change a 
 
 ## Multiplayer
 
-<img src="docs/webomsi/multiplayer.png" width="560" align="right" alt="Two browsers on one server">
+<img src="docs/webomsi/multiplayer.png" width="560" align="right" alt="Two browsers in one game">
 
-Players meet on a **dedicated server**. A page cannot open a UDP socket, so it talks to the server's WebSocket
-gateway (`wss://…/ws`) instead; the server sees such a player like any other and the game protocol is unchanged.
-Everybody sees the others' buses, names and chat.
+Play together three ways, all under **Multiplayer** on the start screen:
 
-Join: choose **Multiplayer** on the start screen and paste the address.
+* **Public list**: the rooms and servers that are open now, one tap to join.
+* **A room, hosted by a browser**: press *Host a room* and send friends the code or the invite link. **No server and no
+  install**: your browser is the server and theirs connect to it directly (WebRTC). Tick *Show my room in the public list*
+  to let strangers find it.
+* **A dedicated server** for a lasting place: `docker compose -f deploy/docker-compose.yml up -d` on any machine with a
+  domain, or on your own computer through a free tunnel. [`deploy/announce.sh`](deploy/announce.sh) lists it in the public
+  list.
 
-Host (a computer with a few spare CPU cores is enough):
-
-```sh
-# 1. build the game for your system (once)
-cargo build --release -p omsi-app
-# 2. make the demo content
-tools/public/build.sh
-# 3. start the server
-OMSI_TRIMMED_PACK=1 target/release/openomsi --root public-pack --server server.cfg
-```
-
-The first start writes `server.cfg`; set `map = maps/Demo/global.cfg`, and `tunnel = 1` if you have no public
-address: the server then opens a free Cloudflare tunnel and prints an `https://….trycloudflare.com` address for the
-players (a page served over https needs a `wss://` address, and a tunnel gives one). More in
-[docs/SERVER.md](docs/SERVER.md). You can list your servers for the start screen in
-[`web/config.json`](web/config.json) (`"servers": [{ "name": "…", "url": "wss://…" }]`).
+Everybody sees the others' buses, names and chat. The list is made by the hosts themselves and is not checked.
+**[Step-by-step guide →](docs/webomsi/multiplayer.md)** (joining, hosting, running a server, troubleshooting)
 
 <br clear="right">
 
@@ -153,7 +143,7 @@ The web port is a set of changes to the engine, none of which changes what the d
 | No file system | The game's files are one zip held in memory and mounted as a folder (`omsi_cfg::vfs::mount_zip_memory`). |
 | GPU setup is asynchronous | `web::start` opens the WebGPU device first, then runs the winit event loop on the page's canvas. |
 | No threads | Tile loading, sky computation and texture work run inline; rayon pools use the page's own thread. |
-| No UDP | `omsi_net::Socket` is UDP on a computer and a WebSocket in a page; the session code is unchanged. |
+| No UDP | `omsi_net::Socket` is UDP on a computer, a WebSocket or WebRTC data channels in a page; the session code is unchanged. |
 | No audio device | cpal's Web Audio backend. |
 | Chrome's strict WGSL | The shaders are checked by Tint; derivatives in non-uniform flow are allowed explicitly. |
 | `Instant`, process ids, sleeping | `web-time`, `omsi_cfg::pid()`, `omsi_cfg::sleep()`. |

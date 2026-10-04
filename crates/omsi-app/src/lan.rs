@@ -920,6 +920,13 @@ fn ws_join_target(url: &str) -> Result<String, String> {
 /// briefly for the host's welcome, so that its map is loaded with the host's world.
 pub fn start(args: &Args) -> Option<LanSession> {
     let world = world_info(args);
+    // a page that hosts: the players come over WebRTC, through the hub the page fills
+    #[cfg(target_arch = "wasm32")]
+    if args.lan_host.is_some() {
+        let s = LanSession::host_web(crate::web::rtc_hub(), &player_name(args), world);
+        write_status(&s, &Default::default(), None);
+        return Some(s);
+    }
     let session = match (&args.lan_host, &args.lan_join) {
         (Some(port), _) => {
             // 0 = the default port, or the next free one when another session runs here
@@ -940,6 +947,13 @@ pub fn start(args: &Args) -> Option<LanSession> {
         (None, Some(target)) => {
             // a page: the session's datagrams go straight over the WebSocket, and nothing
             // here may wait for the welcome (the page's own events deliver it)
+            // a page that joins a game hosted in another page: the channel is already open
+            #[cfg(target_arch = "wasm32")]
+            if target.trim() == "rtc:" {
+                let s = LanSession::join_rtc(crate::web::rtc_hub(), &player_name(args), world);
+                write_status(&s, &Default::default(), None);
+                return Some(s);
+            }
             #[cfg(target_arch = "wasm32")]
             {
                 let Some(url) = omsi_net::ws::ws_url(target) else {
@@ -2344,12 +2358,13 @@ fn remote_bus_file(args: &Args, bus: &str) -> Result<PathBuf, String> {
     if !roots.iter().any(|r| path.starts_with(r)) {
         return Err("not inside a content folder".into());
     }
-    let md = std::fs::metadata(&path).map_err(|e| e.to_string())?;
-    if !md.is_file() {
+    // (through the content layer: the file may be inside a zip, as it always is in a page)
+    if !omsi_cfg::vfs::is_file(&path) {
         return Err("not a file".into());
     }
-    if md.len() > MAX_VEHICLE_FILE {
-        return Err(format!("{} bytes is too much for a vehicle file", md.len()));
+    let len = omsi_cfg::vfs::read(&path).map_err(|e| e.to_string())?.len() as u64;
+    if len > MAX_VEHICLE_FILE {
+        return Err(format!("{len} bytes is too much for a vehicle file"));
     }
     Ok(path)
 }

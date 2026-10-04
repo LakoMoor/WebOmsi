@@ -16,6 +16,7 @@
 
 <!-- in-game toolbar -->
 <div id="bar" class="toolbar" hidden>
+  <button id="b-room" class="roomchip" hidden title="Invite link"></button>
   <button id="b-help" data-i18n-title="help" title="Controls">?</button>
   <button id="b-fs" data-i18n-title="fullscreen" title="Full screen">⛶</button>
   <button id="b-exit" data-i18n-title="exit" title="Back to menu">✕</button>
@@ -97,10 +98,35 @@
       </div>
     </div>
 
-    <div id="multi" class="field" hidden>
-      <label for="server" data-i18n="server">Server address</label>
-      <input id="server" type="text" placeholder="wss://….trycloudflare.com/ws" autocapitalize="off" autocorrect="off" spellcheck="false">
-      <div id="server-list" class="chips"></div>
+    <div id="multi" hidden>
+      <div class="seg small" id="mp-mode" role="tablist">
+        <button data-mode="public" class="on" data-i18n="mp_public">Public</button>
+        <button data-mode="join" data-i18n="mp_join">By code</button>
+        <button data-mode="host" data-i18n="mp_host">Host a room</button>
+        <button data-mode="server" data-i18n="mp_server">Server</button>
+      </div>
+      <div id="mp-public" class="field">
+        <ul id="lobby-list" class="lobby"></ul>
+        <p class="muted" id="lobby-empty" data-i18n="pub_empty">Nobody is hosting right now. Host a room (and list it) or join by code.</p>
+        <p class="muted small" data-i18n="pub_note">The list is made by the hosts themselves and is not checked: join people you trust.</p>
+      </div>
+      <div id="mp-join" class="field" hidden>
+        <label for="room" data-i18n="room_code">Room code</label>
+        <input id="room" type="text" maxlength="12" placeholder="ABC234" autocapitalize="characters" autocorrect="off" spellcheck="false" class="code">
+        <p class="muted" data-i18n="join_note">Ask the host for the code or the invite link.</p>
+      </div>
+      <div id="mp-host" class="field" hidden>
+        <label data-i18n="your_room">Your room</label>
+        <div class="roombox"><b id="room-new" class="code">------</b><button id="room-copy" class="chip" data-i18n="copy_link">Copy invite link</button><button id="room-again" class="chip" title="New code">↻</button></div>
+        <label class="check"><input id="room-public" type="checkbox"> <span data-i18n="list_public">Show my room in the public list</span></label>
+        <input id="room-name" type="text" maxlength="32" data-i18n-ph="room_name_ph" placeholder="Room name" hidden>
+        <p class="muted" data-i18n="host_note">Your browser is the server: friends join with the code. Keep this tab open and visible while you play.</p>
+      </div>
+      <div id="mp-server" class="field" hidden>
+        <label for="server" data-i18n="server">Server address</label>
+        <input id="server" type="text" placeholder="wss://….trycloudflare.com/ws" autocapitalize="off" autocorrect="off" spellcheck="false">
+        <div id="server-list" class="chips"></div>
+      </div>
     </div>
 
     <button id="go" class="btn primary" data-i18n="play">Play</button>

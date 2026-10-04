@@ -107,6 +107,7 @@ pub use web_stubs::{bridge, official, tunnel};
 pub use socket::Socket;
 
 use std::cell::Cell;
+use std::ops::Not;
 use std::collections::HashMap;
 use std::net::{Ipv4Addr, SocketAddr, ToSocketAddrs, UdpSocket};
 use web_time::{Duration, Instant};
@@ -1625,6 +1626,26 @@ impl LanSession {
         Ok(s)
     }
 
+    /// Host a session from a page: players join over WebRTC data channels that the page puts
+    /// into `hub` as they open.
+    #[cfg(target_arch = "wasm32")]
+    pub fn host_web(hub: socket::rtc::RtcHub, name: &str, world: WorldInfo) -> LanSession {
+        let mut s = LanSession::new(Socket::Rtc(hub), Role::Host, name, world);
+        s.session = random_session_id();
+        log::info!("LAN: hosting session {} from a page as '{name}' (protocol {PROTOCOL}), players join over WebRTC", session_hex(s.session));
+        s
+    }
+
+    /// Join a host from a page over the data channel the page opened to it (`hub` holds it).
+    #[cfg(target_arch = "wasm32")]
+    pub fn join_rtc(hub: socket::rtc::RtcHub, name: &str, world: WorldInfo) -> LanSession {
+        let mut s = LanSession::new(Socket::Rtc(hub), Role::Client, name, world);
+        s.host = Some(socket::WEB_PEER);
+        s.candidates = vec![socket::WEB_PEER];
+        log::info!("LAN: joining a host over WebRTC as '{name}'");
+        s
+    }
+
     /// Join by what the player typed (see `parse_join`); discovery waits up to `wait`.
     pub fn join(
         target: &str,
@@ -2386,6 +2407,13 @@ impl LanSession {
         }
         if let Some(r) = self.other_reject.as_ref() {
             return format!("the host did not answer; {r}");
+        }
+        // a page reaches its host over a WebSocket or a WebRTC channel: no ports, no firewall
+        if matches!(self.socket, Socket::Udp(_)).not() {
+            return format!(
+                "no answer from the host within {:.0} s. Is the room or server still running, and did the connection last? (a very strict network can block a direct connection)",
+                after.as_secs_f32()
+            );
         }
         format!(
             "no answer from {} within {:.0} s. Is the session still running, and was the whole code copied? The host's firewall must let the game receive UDP on port {port} (on Windows allow it for public networks too). If both of you are behind a mobile or carrier network that changes the port for every connection, the way cannot be opened: the host can forward UDP port {port} on the router, or you both use a VPN",

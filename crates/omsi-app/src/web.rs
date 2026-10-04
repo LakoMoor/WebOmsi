@@ -24,6 +24,38 @@ pub(crate) fn low_quality() -> bool {
 }
 
 thread_local! {
+    /// The data channels of this page's multiplayer session (see `omsi_net::socket::rtc`).
+    static HUB: omsi_net::socket::rtc::RtcHub = omsi_net::socket::rtc::RtcHub::new();
+}
+
+/// The hub the session talks through.
+pub(crate) fn rtc_hub() -> omsi_net::socket::rtc::RtcHub {
+    HUB.with(|h| h.clone())
+}
+
+/// A player's open data channel (the page made it: the offer, the answer, ICE): a page that
+/// hosts a game calls this for everybody who joins. Returns the players connected now.
+#[wasm_bindgen]
+pub fn rtc_add_peer(channel: web_sys::RtcDataChannel) -> u32 {
+    let hub = rtc_hub();
+    let addr = hub.add_peer(channel);
+    log::info!("WebRTC: a player connected as {addr}");
+    hub.peer_count() as u32
+}
+
+/// The open data channel to the host: a page that joins a game calls this before `start`.
+#[wasm_bindgen]
+pub fn rtc_set_server(channel: web_sys::RtcDataChannel) {
+    rtc_hub().set_server(channel);
+}
+
+/// Players connected to this page's game (the host's count, or 1 for a client).
+#[wasm_bindgen]
+pub fn rtc_peers() -> u32 {
+    rtc_hub().peer_count() as u32
+}
+
+thread_local! {
     static GPU: RefCell<Option<(wgpu::Instance, omsi_render::Renderer)>> = const { RefCell::new(None) };
     /// The canvas the game draws on (the window takes it).
     static CANVAS: RefCell<Option<web_sys::HtmlCanvasElement>> = const { RefCell::new(None) };

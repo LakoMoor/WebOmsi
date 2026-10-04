@@ -3,6 +3,7 @@ Error.stackTraceLimit = 80;
 // player's disk), then hands it to the game. Every path is relative: the page works from
 // any folder, for example https://<user>.github.io/<repo>/.
 import { scan } from './zipscan.js';
+import * as rtc from './rtc.js';
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 const touchDevice = (matchMedia('(pointer: coarse)').matches && navigator.maxTouchPoints > 0) || params.get('touch') === '1';
@@ -40,6 +41,14 @@ const T = {
       ['p', 'The files never leave your device: the page reads them locally and keeps them in the browser\'s own storage. Keep the total under about 1 GB: the browser holds them in memory. A white building or bus part is a missing texture; a bus that will not move is usually missing scripts. Press F12 and look at the red lines in the console.'],
       ['p', 'Please add only content you have the right to use. OMSI 2\'s files and most mods are not for sharing with others.'],
     ],
+    mp_join: 'Join a room', mp_host: 'Host a room', mp_server: 'Server', room_code: 'Room code', your_room: 'Your room',
+    join_note: 'Ask the host for the code or the invite link.', host_note: 'Your browser is the server: friends join with the code. Keep this tab open and visible while you play.',
+    copy_link: 'Copy invite link', copied: 'Invite link copied', room: 'Room', players: 'players',
+    c_offer: 'Preparing the connection…', c_waiting: 'Waiting for the host to answer…', c_connecting: 'Connecting to the host…',
+    e_nohost: 'Nobody answered in this room. Check the code, and that the host has the game open.', e_noconnect: 'Could not connect to the host (a strict network may block direct connections).',
+    e_code: 'Enter the room code.', e_relay: 'The room relay could not be reached.', hosting: 'Room open',
+    mp_public: 'Public', pub_empty: 'Nobody is hosting right now. Host a room (and list it) or join by code.', pub_note: 'The list is made by the hosts themselves and is not checked: join people you trust.',
+    list_public: 'Show my room in the public list', room_name_ph: 'Room name', join_btn: 'Join', kind_room: 'browser room', kind_server: 'server', verified: 'official',
     kb: [['W / S', 'gas / brake'], ['A / D', 'steering'], ['Space', 'parking brake'], ['Shift+U', 'start the bus'], ['Shift+1', 'doors'], ['H', 'horn'], ['Z / X / C', 'indicators / hazards'], ['F1', 'cameras'], ['Esc', 'game menu'], ['Mouse', 'look round, press cab buttons']],
     ts: [['Wheel', 'drag the steering wheel, left'], ['Pedals', 'BRAKE and GAS, right'], ['R N D', 'gearbox buttons'], ['P', 'parking brake'], ['Finger', 'look round; two fingers zoom']],
   },
@@ -73,6 +82,14 @@ const T = {
       ['p', 'Файлы не покидают ваше устройство: страница читает их локально и хранит в собственном хранилище браузера. Держите общий объём до 1 ГБ: браузер держит их в памяти. Белое здание или деталь автобуса - не найдена текстура; автобус, который не едет, чаще всего остался без скриптов. Нажмите F12 и посмотрите красные строки в консоли.'],
       ['p', 'Добавляйте только то, что вам можно использовать. Файлы OMSI 2 и большинство модов не предназначены для передачи другим.'],
     ],
+    mp_join: 'Войти в комнату', mp_host: 'Создать комнату', mp_server: 'Сервер', room_code: 'Код комнаты', your_room: 'Ваша комната',
+    join_note: 'Попросите у хозяина код или ссылку-приглашение.', host_note: 'Ваш браузер - сервер: друзья заходят по коду. Держите эту вкладку открытой и видимой, пока играете.',
+    copy_link: 'Скопировать ссылку', copied: 'Ссылка скопирована', room: 'Комната', players: 'игроков',
+    c_offer: 'Готовлю соединение…', c_waiting: 'Жду ответа хозяина…', c_connecting: 'Подключаюсь к хозяину…',
+    e_nohost: 'В этой комнате никто не ответил. Проверьте код и что у хозяина открыта игра.', e_noconnect: 'Не удалось соединиться с хозяином (строгая сеть может блокировать прямые соединения).',
+    e_code: 'Введите код комнаты.', e_relay: 'Не удалось связаться с релеем комнат.', hosting: 'Комната открыта',
+    mp_public: 'Публичные', pub_empty: 'Сейчас никто не хостит. Создайте комнату (и покажите её в списке) или войдите по коду.', pub_note: 'Список составляют сами хосты, он не проверяется: заходите к тем, кому доверяете.',
+    list_public: 'Показывать мою комнату в публичном списке', room_name_ph: 'Название комнаты', join_btn: 'Войти', kind_room: 'комната в браузере', kind_server: 'сервер', verified: 'официальный',
     kb: [['W / S', 'газ / тормоз'], ['A / D', 'руль'], ['Space', 'стояночный тормоз'], ['Shift+U', 'запустить автобус'], ['Shift+1', 'двери'], ['H', 'гудок'], ['Z / X / C', 'поворотники / аварийка'], ['F1', 'камеры'], ['Esc', 'меню игры'], ['Мышь', 'осмотреться, нажимать кнопки кабины']],
     ts: [['Руль', 'ведите по рулю, слева'], ['Педали', 'BRAKE и GAS, справа'], ['R N D', 'кнопки коробки передач'], ['P', 'стояночный тормоз'], ['Палец', 'осмотреться; двумя пальцами - приблизить']],
   },
@@ -182,7 +199,7 @@ function renderMaps() {
   sel.value = opts.some((o) => o.v === want) ? want : MAP;
   $('map-field').hidden = opts.length < 2;
 }
-let multi = !!params.get('server');
+let multi = !!params.get('server') || !!params.get('room');
 function setMode(m) {
   multi = m; $('tab-solo').classList.toggle('on', !m); $('tab-multi').classList.toggle('on', m);
   $('multi').hidden = !m;
@@ -190,6 +207,83 @@ function setMode(m) {
 $('tab-solo').addEventListener('click', () => setMode(false));
 $('tab-multi').addEventListener('click', () => setMode(true));
 setMode(multi);
+
+// ---- multiplayer: join a room, host a room, or a server's address ----------------------------------------
+let mpMode = params.get('server') ? 'server' : (params.get('room') ? 'join' : 'public');
+let hostCode = rtc.newRoomCode();
+const inviteLink = (code) => `${location.origin}${location.pathname}?room=${code}`;
+const roomParam = rtc.cleanCode(params.get('room'));
+if (roomParam) $('room').value = roomParam;
+function setMp(mode) {
+  mpMode = mode;
+  document.querySelectorAll('#mp-mode button').forEach((b) => b.classList.toggle('on', b.dataset.mode === mode));
+  $('mp-public').hidden = mode !== 'public'; $('mp-join').hidden = mode !== 'join'; $('mp-host').hidden = mode !== 'host'; $('mp-server').hidden = mode !== 'server';
+  $('go').hidden = mode === 'public';
+  if (mode === 'public') watchLobby();
+}
+
+// ---- the public list ------------------------------------------------------------------------------------------------
+let lobbyWatch = null, lobbyItems = [];
+function watchLobby() {
+  if (lobbyWatch) return;
+  lobbyWatch = rtc.lobby((list) => { lobbyItems = list; renderLobby(); });
+}
+function renderLobby() {
+  const official = (config.servers || []).filter((s) => s.url).map((s) => ({ kind: 'server', url: s.url, name: s.name || s.url, map: '', players: s.players | 0, max: 16, official: true, id: 'o:' + s.url }));
+  const all = [...official, ...lobbyItems.filter((e) => !official.some((o) => o.url && e.url && o.url.toLowerCase() === e.url.toLowerCase()))];
+  $('lobby-empty').hidden = all.length > 0;
+  $('lobby-list').replaceChildren(...all.map((e) => {
+    const li = document.createElement('li');
+    const name = document.createElement('b'); name.textContent = e.name;
+    const small = document.createElement('small');
+    small.textContent = [e.kind === 'room' ? t('kind_room') : t('kind_server'), e.map, `${e.players}/${e.max} ${t('players')}`].filter(Boolean).join(' · ');
+    if (e.official) { const tag = document.createElement('span'); tag.className = 'tag ok'; tag.textContent = t('verified'); small.append(' ', tag); }
+    const btn = document.createElement('button'); btn.textContent = t('join_btn');
+    btn.onclick = () => {
+      if (e.kind === 'room') { $('room').value = e.code; setMp('join'); } else { $('server').value = e.url; setMp('server'); }
+      play();
+    };
+    li.append(name, small, btn); return li;
+  }));
+}
+document.querySelectorAll('#mp-mode button').forEach((b) => b.addEventListener('click', () => setMp(b.dataset.mode)));
+function renderRoom() { $('room-new').textContent = hostCode; }
+async function copyInvite() {
+  try { await navigator.clipboard.writeText(inviteLink(hostCode)); toast(t('copied')); } catch (_) { prompt(t('copy_link'), inviteLink(hostCode)); }
+}
+$('room-copy').addEventListener('click', copyInvite);
+$('room-public').addEventListener('change', (e) => { $('room-name').hidden = !e.target.checked; });
+$('room-name').value = localStorage.getItem('omsi.roomname') || '';
+$('room-again').addEventListener('click', () => { hostCode = rtc.newRoomCode(); renderRoom(); });
+$('room').addEventListener('input', (e) => { e.target.value = rtc.cleanCode(e.target.value); });
+setMp(mpMode); renderRoom(); renderLobby();
+
+let hosting = null;
+function startHosting(game) {
+  const chip = $('b-room');
+  const show = (n) => { chip.textContent = `${t('room')} ${hostCode} · ${n}`; };
+  chip.hidden = false; show(0); chip.onclick = copyInvite;
+  hosting = rtc.host(hostCode, {
+    iceServers: config.iceServers,
+    onPeer: (ch) => { show(game.rtc_add_peer(ch)); },
+    onError: (e) => console.warn('room:', e),
+  });
+  setInterval(() => show(game.rtc_peers()), 2000);
+  if ($('room-public').checked) {
+    const name = $('room-name').value.trim() || `${$('name').value.trim() || 'Driver'}'s room`;
+    const post = () => rtc.announce({ kind: 'room', code: hostCode, name, map: $('map').selectedOptions[0]?.textContent || '', players: game.rtc_peers() + 1, max: 16 }).catch(() => {});
+    post(); setInterval(post, 25000);
+  }
+  toast(`${t('hosting')}: ${hostCode}`, 5000);
+}
+function friendly(e) {
+  const msg = String((e && e.message) || e);
+  if (msg === 'nohost') return t('e_nohost');
+  if (msg === 'noconnect') return t('e_noconnect');
+  if (msg === 'room code') return t('e_code');
+  if (/relay|Failed to fetch|NetworkError/i.test(msg)) return t('e_relay');
+  return msg;
+}
 function renderServers() {
   const box = $('server-list'); box.replaceChildren();
   for (const s of config.servers || []) {
@@ -365,9 +459,14 @@ async function play() {
   $('error').hidden = true;
   if (!navigator.gpu) { fail(t('no_gpu')); return; }
   $('go').disabled = true; $('progress').hidden = false;
-  const name = $('name').value.trim(); const server = multi ? $('server').value.trim() : '';
+  const mode = multi ? mpMode : 'solo';
+  const server = mode === 'server' ? $('server').value.trim() : '';
+  const code = rtc.cleanCode($('room').value);
+  if (mode === 'public') return;
+  if (mode === 'join' && code.length < 4) { fail(t('e_code')); return; }
+  const name = $('name').value.trim();
   const quality = $('quality').value;
-  localStorage.setItem('omsi.name', name); localStorage.setItem('omsi.server', $('server').value.trim());
+  localStorage.setItem('omsi.name', name); localStorage.setItem('omsi.server', $('server').value.trim()); localStorage.setItem('omsi.roomname', $('room-name').value.trim());
   localStorage.setItem('omsi.bus', chosen); localStorage.setItem('omsi.quality', quality); localStorage.setItem('omsi.map', $('map').value);
   if (touchDevice) fullscreen();
   try {
@@ -376,22 +475,31 @@ async function play() {
     await game.default();
     step(1);
     const { base, extras } = await getPack();
-    step(2); say(t('starting'));
     const args = ['--map', $('map').value || MAP, '--bus', chosen, '--no-menu'];
     if (name) args.push('--lan-name', name);
-    if (server) args.push('--lan-join', server);
+    if (mode === 'join') {
+      // open the channel to the host first: the game's session starts on it
+      step(2); progress(null);
+      const ch = await rtc.join(code, { iceServers: config.iceServers, onStatus: (s) => say(t('c_' + s)) });
+      game.rtc_set_server(ch);
+      args.push('--lan-join', 'rtc:');
+    } else if (mode === 'host') args.push('--lan-host', '0');
+    else if (server) args.push('--lan-join', server);
+    step(2); say(t('starting'));
     $('menu').classList.add('gone');
     document.body.classList.add('playing');
     $('bar').hidden = false; $('rotate').hidden = false;
     $('game').focus();
     if (server) toast(`${t('joined')}: ${server}`, 3500);
+    if (mode === 'join') toast(`${t('room')}: ${code}`, 3500);
     await game.start('game', base, args, quality, extras);
+    if (mode === 'host') startHosting(game);
   } catch (e) {
     console.error(e);
     $('menu').classList.remove('gone'); document.body.classList.remove('playing');
     $('bar').hidden = true; $('rotate').hidden = true;
     $('go').disabled = false; $('progress').hidden = true;
-    fail(String((e && e.message) || e));
+    fail(friendly(e));
   }
 }
 $('go').addEventListener('click', play);
