@@ -76,6 +76,13 @@ function gathered(pc, ms = 4000) {
     setTimeout(done, ms);                                   // enough candidates by then
   });
 }
+// what a connection did, for the console (the first thing to look at when a room does not connect)
+function trace(tag, pc) {
+  pc.addEventListener('iceconnectionstatechange', () => console.log(`[rtc ${tag}] ice ${pc.iceConnectionState}`));
+  pc.addEventListener('connectionstatechange', () => console.log(`[rtc ${tag}] connection ${pc.connectionState}`));
+  pc.addEventListener('icecandidateerror', (e) => console.log(`[rtc ${tag}] candidate error ${e.errorCode} ${e.url || ''} ${e.errorText || ''}`));
+}
+const kinds = (pc) => ((pc.localDescription && pc.localDescription.sdp.match(/typ (host|srflx|relay|prflx)/g)) || []).map((k) => k.slice(4)).join(',') || 'none';
 const config = (iceServers) => ({ iceServers: iceServers && iceServers.length ? iceServers : DEFAULT_ICE });
 
 // ---- hosting: a page that answers whoever joins the room ---------------------------------------------
@@ -89,6 +96,7 @@ export function host(code, { iceServers, onPeer, onError = () => {} }) {
     try {
       const { id, offer } = await unpack(text);
       const pc = new RTCPeerConnection(config(iceServers));
+      trace('host', pc);
       peers.add(pc);
       pc.ondatachannel = (e) => {
         const ch = e.channel;
@@ -99,6 +107,7 @@ export function host(code, { iceServers, onPeer, onError = () => {} }) {
       await pc.setRemoteDescription({ type: 'offer', sdp: offer });
       await pc.setLocalDescription(await pc.createAnswer());
       await gathered(pc);
+      console.log('[rtc host] answering; candidates:', kinds(pc));
       await publish(topic(code, 'a-' + id), await pack({ answer: pc.localDescription.sdp }));
     } catch (e) { onError(String((e && e.message) || e)); }
   });
@@ -112,12 +121,14 @@ export async function join(code, { iceServers, timeout = 30000, onStatus = () =>
   if (code.length < 4) throw new Error('room code');
   const id = Array.from(crypto.getRandomValues(new Uint8Array(6)), (b) => ALPHABET[b % ALPHABET.length]).join('').toLowerCase();
   const pc = new RTCPeerConnection(config(iceServers));
+  trace('join', pc);
   const channel = pc.createDataChannel('game', { ordered: false, maxRetransmits: 0 });
   channel.binaryType = 'arraybuffer';
   try {
     onStatus('offer');
     await pc.setLocalDescription(await pc.createOffer());
     await gathered(pc);
+    console.log('[rtc join] offering; candidates:', kinds(pc));
     const answered = new Promise((resolve) => {
       const sub = subscribe(topic(code, 'a-' + id), async (text) => {
         try { const { answer } = await unpack(text); sub.close(); resolve(answer); } catch (_) {}
