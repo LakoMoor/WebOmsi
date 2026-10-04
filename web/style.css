@@ -35,8 +35,7 @@ label { display: block; font-size: 12px; color: var(--ink); margin: 0 0 4px; }
 /* ---- the mark ------------------------------------------------------------------------------------------ */
 .wordmark { display: flex; align-items: flex-end; line-height: .9; font-family: "Arial Black", "Segoe UI Black", Impact, Verdana, sans-serif; font-style: italic; font-weight: 900; color: #2b2a28; user-select: none; }
 .wordmark .w { font-size: 34px; margin-right: 3px; transform: skewX(-6deg); letter-spacing: -1px; }
-.wordmark .o { font-size: 60px; letter-spacing: -3px; text-shadow: 3px 3px 0 #b85a07, 5px 5px 0 #8a4505; transform: skewX(-6deg); }
-.wordmark .two { width: 40px; height: 44px; margin-left: 4px; }
+.wordmark .o { font-size: 64px; letter-spacing: -3px; transform: skewX(-6deg); color: transparent; background: repeating-linear-gradient(180deg, #2b2a28 0 5px, #6d3a07 5px 7px); -webkit-background-clip: text; background-clip: text; filter: drop-shadow(3px 3px 0 #b85a07); padding-right: 6px; }
 .build { text-align: right; font-size: 11px; color: var(--ink2); line-height: 1.5; }
 
 /* ---- controls ---------------------------------------------------------------------------------------- */
@@ -55,30 +54,33 @@ input:focus, select:focus { outline: 2px solid var(--mark); outline-offset: 0; }
 .btn { display: block; width: 100%; text-align: center; margin-top: 10px; text-decoration: none; }
 .btn.small { display: inline-block; width: auto; padding: 4px 10px; margin: 6px 6px 0 0; }
 .driver-fields { flex: 1; min-width: 0; }
-.avatar { width: 96px; height: 110px; flex: none; border: 1px solid var(--edge); }
+label.gap { margin-top: 10px; }
+.radios.tight { margin-top: 12px; }
+.tfields { display: flex; gap: 12px; margin-top: 8px; flex-wrap: wrap; } .tfields label { display: flex; align-items: center; gap: 6px; margin: 0; }
+.tfields input { width: auto; padding: 3px 5px; border: 1px solid #8d8d8d; background: #fff; color: #222; font: 12px Verdana, Tahoma, Arial, sans-serif; }
 a.btn { color: var(--ink); }
 button.link { background: none; border: 0; padding: 0; text-decoration: underline; color: var(--ink2); }
 .muted { margin: 8px 0; color: var(--ink2); font-size: 11.5px; } .muted.small { font-size: 10.5px; }
 
 /* the vehicles: a list box */
 .buses { flex: 1; min-height: 0; overflow: auto; border: 1px solid var(--edge); background: #fcc063; }
-.bus { display: grid; grid-template-columns: 64px 1fr; align-items: center; gap: 10px; padding: 4px 10px; margin: 0; border-bottom: 1px solid #e79b25; cursor: pointer; position: relative; }
+.bus { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 10px; padding: 5px 10px; margin: 0; border-bottom: 1px solid #e79b25; cursor: pointer; position: relative; }
 .bus:hover { background: #fdcb7a; }
 .bus input { position: absolute; opacity: 0; pointer-events: none; }
 .bus:has(input:checked) { background: var(--mark); color: #fff; }
-.bus svg { width: 64px; height: 32px; display: block; }
+.bus .spec { font-size: 11px; white-space: pre; opacity: .85; }
 .bus b { display: block; font-size: 13px; } .bus .info { font-size: 11px; opacity: .85; }
 .bus .info { display: inline-block; margin-right: 10px; } .tags { display: inline-block; } .tag { font-size: 10.5px; margin-right: 6px; opacity: .9; } .tag.ok { font-weight: 700; }
 
 /* the picture */
-.picture { background: #fff3da; border: 1px solid var(--edge); padding: 8px; display: grid; place-items: center; min-height: 140px; }
-.picture svg { width: 100%; max-height: 190px; height: auto; }
+.picture { display: block; width: 100%; height: auto; max-height: 100%; object-fit: cover; border: 1px solid var(--edge); background: #fff3da; }
 .caption { text-align: center; font-weight: 700; font-size: 15px; margin-top: 8px; color: var(--ink); }
 .caption small { display: block; font-weight: 400; font-size: 11px; color: var(--ink2); }
 
 /* the information boxes */
 .infobox { flex: 1; min-height: 80px; overflow: auto; border: 1px solid var(--edge); background: var(--box); padding: 6px 8px; font-size: 11.5px; white-space: pre-line; }
 .infobox b { display: block; margin-top: 6px; }
+.mapbox img { float: right; width: 42%; max-width: 220px; margin: 0 0 6px 10px; border: 1px solid var(--edge); }
 
 /* multiplayer */
 .mp { margin-top: 10px; }

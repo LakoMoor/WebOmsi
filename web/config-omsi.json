@@ -13,7 +13,8 @@
       "desc": {
         "en": "A double-decker city bus. Press Shift+U to start it as in the original; the doors and the driver's controls work with the mouse.",
         "ru": "Двухэтажный городской автобус. Запускается, как в оригинале, по Shift+U; двери и органы водителя работают мышью."
-      }
+      },
+      "preview": "pack-omsi/previews/sd202.jpg"
     },
     {
       "file": "Vehicles/MAN_NL_NG/MAN_EN92_main.bus",
@@ -26,7 +27,8 @@
       "desc": {
         "en": "A low-floor city bus. Press Shift+U to start it.",
         "ru": "Низкопольный городской автобус. Запускается по Shift+U."
-      }
+      },
+      "preview": "pack-omsi/previews/nl.jpg"
     },
     {
       "file": "Vehicles/MB_O305/O305_E2H_84.bus",
@@ -39,7 +41,8 @@
       "desc": {
         "en": "The classic city bus of the old fleets. The lightest of the three.",
         "ru": "Классический городской автобус старых парков. Самый лёгкий из трёх."
-      }
+      },
+      "preview": "pack-omsi/previews/o305.jpg"
     }
   ],
   "servers": [],
@@ -47,5 +50,6 @@
   "mapInfo": {
     "en": "Grundorf: a small made-up village with one short bus line, a gentle place to learn.",
     "ru": "Грундорф: небольшая вымышленная деревня с одной короткой линией, спокойное место для обучения."
-  }
+  },
+  "mapPreview": "pack-omsi/previews/map.jpg"
 }

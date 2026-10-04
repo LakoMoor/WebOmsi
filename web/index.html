@@ -63,11 +63,6 @@
     <h2 data-i18n="options">Options</h2>
     <label data-i18n="language">Language</label>
     <div class="radios"><button id="lang-en" class="radio">English</button><button id="lang-ru" class="radio">Русский</button></div>
-    <label for="quality" data-i18n="quality">Graphics</label>
-    <select id="quality">
-      <option value="high" data-i18n="q_high">High</option>
-      <option value="low" data-i18n="q_low">Light</option>
-    </select>
     <p class="links">
       <a href="https://github.com/LakoMoor/WebOmsi" target="_blank" rel="noopener">GitHub</a> ·
       <a href="engine/" data-i18n="engine">About the engine</a>
@@ -84,7 +79,7 @@
   <div class="window" id="panel">
 
     <section class="cell c-logo">
-      <div class="wordmark" aria-label="WebOmsi"><span class="w">Web</span><span class="o">Omsi</span><svg class="two" viewBox="0 0 40 44" aria-hidden="true"><rect x="3" y="7" width="34" height="23" rx="5" fill="#2b2a28"/><rect x="7" y="11" width="26" height="9" rx="2" fill="#f5a31b"/><circle cx="12" cy="33" r="5" fill="#2b2a28" stroke="#f5a31b" stroke-width="2"/><circle cx="28" cy="33" r="5" fill="#2b2a28" stroke="#f5a31b" stroke-width="2"/></svg></div>
+      <div class="wordmark" aria-label="WebOmsi"><span class="w">Web</span><span class="o">Omsi</span></div>
       <div class="build"><span data-i18n="build">Build</span> <span id="build">web</span><br><span id="subtitle" data-i18n="tagline">A bus simulator in your browser</span></div>
     </section>
 
@@ -98,19 +93,22 @@
     </section>
 
     <section class="cell c-driver">
-      <svg class="avatar" viewBox="0 0 96 110" aria-hidden="true">
-        <rect width="96" height="110" fill="#fbb84a"/>
-        <path d="M10 110c2-26 16-36 38-36s36 10 38 36z" fill="#2f3e57"/>
-        <rect x="40" y="62" width="16" height="14" fill="#e7b48c"/>
-        <ellipse cx="48" cy="46" rx="21" ry="25" fill="#f1c29b"/>
-        <path d="M24 38c0-20 14-26 24-26s24 6 24 26c-6-9-14-12-24-12s-18 3-24 12z" fill="#2b2a28"/>
-        <rect x="20" y="30" width="56" height="7" rx="3" fill="#2b2a28"/>
-        <circle cx="40" cy="47" r="2.4" fill="#2b2a28"/><circle cx="56" cy="47" r="2.4" fill="#2b2a28"/>
-        <path d="M40 58q8 6 16 0" stroke="#7a3f2a" stroke-width="2.4" fill="none" stroke-linecap="round"/>
-      </svg>
       <div class="driver-fields">
         <label for="name" data-i18n="cur_driver">Current driver:</label>
         <input id="name" type="text" maxlength="24" autocomplete="nickname" data-i18n-ph="name_ph" placeholder="Driver">
+        <label for="quality" class="gap" data-i18n="quality">Graphics</label>
+        <select id="quality">
+          <option value="high" data-i18n="q_high">High</option>
+          <option value="low" data-i18n="q_low">Light (weaker devices)</option>
+        </select>
+        <div class="radios stack tight">
+          <button id="t-std" class="radio on" data-i18n="t_std">Use the map's standard time</button>
+          <button id="t-set" class="radio" data-i18n="t_set">Set date and time</button>
+        </div>
+        <div id="t-fields" class="tfields" hidden>
+          <label><span data-i18n="t_date">Date</span> <input id="t-date" type="date" value="1989-05-30"></label>
+          <label><span data-i18n="t_time">Time</span> <input id="t-time" type="time" value="09:00"></label>
+        </div>
       </div>
     </section>
 
@@ -120,7 +118,7 @@
     </section>
 
     <section class="cell c-picture">
-      <div id="art-bus" class="picture"></div>
+      <img id="art-bus" class="picture" alt="" hidden>
       <div id="bus-caption" class="caption"></div>
     </section>
 
@@ -132,7 +130,7 @@
     <section class="cell c-info-map">
       <div id="solo-info">
         <label data-i18n="info_map">Information about the chosen map:</label>
-        <div id="info-map" class="infobox"></div>
+        <div class="infobox mapbox"><img id="map-img" alt="" hidden><div id="info-map"></div></div>
       </div>
       <div id="multi" hidden>
         <div class="radios" id="mp-mode" role="tablist">

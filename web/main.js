@@ -68,6 +68,7 @@ const T = {
     files_n2: 'Files', loading_files: 'Downloading the game files', pick_folder: 'Choose a folder', own_drop2: 'Drop zip files or a folder here, or tap to choose', building: 'Putting the files together…', theme_classic: 'Classic', theme_modern: 'Modern', menu_title: 'WebOmsi - Main menu',
     cur_map: 'Current map:', cur_driver: 'Current driver:', vehicle: 'Vehicle:', info_bus: 'Information about the chosen vehicle:', info_map: 'Information about the chosen map:',
     build: 'Build', language: 'Language', options: 'Options', btn_own: 'Your files', from_files: 'From your files', map_from: 'A map from your files', spec_len: 'Length', spec_power: 'Power', pick_public: 'Pick a room or a server in the list, or choose another way to join.',
+    t_std: "Use the map's standard time", t_set: 'Set date and time', t_date: 'Date', t_time: 'Time',
     kb: [['W / S', 'gas / brake'], ['A / D', 'steering'], ['Space', 'parking brake'], ['Shift+U', 'start the bus'], ['Shift+1', 'doors'], ['H', 'horn'], ['Z / X / C', 'indicators / hazards'], ['F1', 'cameras'], ['Esc', 'game menu'], ['Mouse', 'look round, press cab buttons']],
     ts: [['Wheel', 'drag the steering wheel, left'], ['Pedals', 'BRAKE and GAS, right'], ['R N D', 'gearbox buttons'], ['P', 'parking brake'], ['Finger', 'look round; two fingers zoom']],
   },
@@ -112,6 +113,7 @@ const T = {
     files_n2: 'Файлы', loading_files: 'Загрузка файлов игры', pick_folder: 'Выбрать папку', own_drop2: 'Перетащите сюда zip или папку, либо нажмите и выберите', building: 'Собираю файлы вместе…', theme_classic: 'Классика', theme_modern: 'Современный', menu_title: 'WebOmsi - Главное меню',
     cur_map: 'Текущая карта:', cur_driver: 'Текущий водитель:', vehicle: 'Автобус:', info_bus: 'Информация о выбранном автобусе:', info_map: 'Информация о выбранной карте:',
     build: 'Сборка', language: 'Язык', options: 'Настройки', btn_own: 'Свои файлы', from_files: 'Из ваших файлов', map_from: 'Карта из ваших файлов', spec_len: 'Длина', spec_power: 'Мощность', pick_public: 'Выберите комнату или сервер в списке либо другой способ входа.',
+    t_std: 'Время карты по умолчанию', t_set: 'Задать дату и время', t_date: 'Дата', t_time: 'Время',
     kb: [['W / S', 'газ / тормоз'], ['A / D', 'руль'], ['Space', 'стояночный тормоз'], ['Shift+U', 'запустить автобус'], ['Shift+1', 'двери'], ['H', 'гудок'], ['Z / X / C', 'поворотники / аварийка'], ['F1', 'камеры'], ['Esc', 'меню игры'], ['Мышь', 'осмотреться, нажимать кнопки кабины']],
     ts: [['Руль', 'ведите по рулю, слева'], ['Педали', 'BRAKE и GAS, справа'], ['R N D', 'кнопки коробки передач'], ['P', 'стояночный тормоз'], ['Палец', 'осмотреться; двумя пальцами - приблизить']],
   },
@@ -165,22 +167,6 @@ const CACHE = 'omsi-pack-v1';
 const KEY = './__pack__/' + (manifest ? 'dir-' + manifest.id : encodeURIComponent(packUrl));
 document.title = 'WebOmsi' + (config.title ? ' - ' + config.title : '');
 
-// ---- bus pictures ------------------------------------------------------------------------------
-const NS = 'http://www.w3.org/2000/svg';
-function busArt(color = '#ecbe28', stripe = '#be2824', length = 10.6) {
-  const w = 40 + Math.round((length - 7) * 12);          // a longer bus is a longer picture
-  const svg = document.createElementNS(NS, 'svg');
-  svg.setAttribute('viewBox', `0 0 ${w + 20} 62`);
-  const el = (n, a) => { const e = document.createElementNS(NS, n); for (const k in a) e.setAttribute(k, a[k]); svg.append(e); return e; };
-  el('rect', { x: 8, y: 6, width: w, height: 38, rx: 7, fill: color });
-  el('rect', { x: 8, y: 31, width: w, height: 7, fill: stripe });
-  el('rect', { x: 14, y: 13, width: w - 22, height: 15, rx: 3, fill: '#173047' });
-  const n = Math.max(3, Math.round((w - 30) / 22));
-  for (let i = 1; i < n; i++) el('rect', { x: 14 + ((w - 22) / n) * i - 1.2, y: 13, width: 2.4, height: 15, fill: color });
-  el('rect', { x: w - 12, y: 13, width: 14, height: 15, rx: 3, fill: '#2a5a7c' });
-  for (const cx of [26, w - 18]) { el('circle', { cx, cy: 46, r: 8, fill: '#15171c' }); el('circle', { cx, cy: 46, r: 3.4, fill: '#9aa3ad' }); }
-  return svg;
-}
 const baseBuses = config.buses || [];
 // the player's own zips: [{ id, name, size, maps, buses }] (their bytes are in the cache)
 const MODS_KEY = 'omsi.mods';
@@ -189,14 +175,15 @@ try { mods = JSON.parse(localStorage.getItem(MODS_KEY) || '[]'); } catch (_) { m
 const saveMods = () => { try { localStorage.setItem(MODS_KEY, JSON.stringify(mods)); } catch (_) {} };
 const allBuses = () => [
   ...baseBuses,
-  ...mods.flatMap((m) => m.buses.map((b) => ({ file: b.file, name: b.label, info: m.name, color: '#9aa5b1', stripe: '#3d4652', length: 11, custom: true }))),
+  ...mods.flatMap((m) => m.buses.map((b) => ({ file: b.file, name: b.label, info: m.name, custom: true }))),
 ];
 const first = baseBuses[0] || {};
 const pick = (v) => (v && typeof v === 'object' ? (v[lang] || v.en || '') : (v || ''));
 function showBus(b) {
   b = b || allBuses().find((x) => x.file === chosen) || first;
   if (!b || !b.file) return;
-  $('art-bus').replaceChildren(busArt(b.color, b.stripe, b.length || 10.6));
+  const img = $('art-bus');
+  if (b.preview) { img.src = b.preview; img.alt = b.name; img.hidden = false; } else img.hidden = true;
   const cap = document.createElement('div'); cap.textContent = b.name;
   const small = document.createElement('small'); small.textContent = b.info || '';
   $('bus-caption').replaceChildren(cap, small);
@@ -209,7 +196,10 @@ function showBus(b) {
 function showMap() {
   const sel = $('map');
   const label = sel.selectedOptions[0] ? sel.selectedOptions[0].textContent : '';
-  $('info-map').textContent = (!sel.value || sel.value === MAP) ? pick(config.mapInfo) : `${t('map_from')}: ${label}`;
+  const mine = !sel.value || sel.value === MAP;
+  $('info-map').textContent = mine ? pick(config.mapInfo) : `${t('map_from')}: ${label}`;
+  const mi = $('map-img');
+  if (mine && config.mapPreview) { mi.src = config.mapPreview; mi.hidden = false; } else mi.hidden = true;
 }
 let chosen = params.get('bus') || localStorage.getItem('omsi.bus') || first.file;
 function renderBuses() {
@@ -222,13 +212,11 @@ function renderBuses() {
     input.addEventListener('change', () => { chosen = b.file; showBus(b); });
     const text = document.createElement('div');
     const name = document.createElement('b'); name.textContent = b.name;
-    const info = document.createElement('span'); info.className = 'info'; info.textContent = b.info || '';
-    const tags = document.createElement('div'); tags.className = 'tags';
-    if (b.custom) tags.append(Object.assign(document.createElement('span'), { className: 'tag', textContent: t('your_buses') }));
-    if (b.length && !b.custom) tags.append(Object.assign(document.createElement('span'), { className: 'tag', textContent: `${b.length} ${t('len')}` }));
-    if (b.kw) tags.append(Object.assign(document.createElement('span'), { className: 'tag', textContent: `${b.kw} ${t('kw')}` }));
-    text.append(name, info, tags);
-    label.append(input, busArt(b.color, b.stripe, b.length), text);
+    const info = document.createElement('span'); info.className = 'info'; info.textContent = b.custom ? t('your_buses') + ': ' + (b.info || '') : (b.info || '');
+    text.append(name, info);
+    const spec = document.createElement('span'); spec.className = 'spec';
+    spec.textContent = [b.length && !b.custom ? `${b.length} ${t('len')}` : '', b.kw ? `${b.kw} ${t('kw')}` : ''].filter(Boolean).join('  ');
+    label.append(input, text, spec);
     return label;
   }));
 }
@@ -238,6 +226,17 @@ $('name').value = localStorage.getItem('omsi.name') || '';
 $('server').value = params.get('server') || localStorage.getItem('omsi.server') || '';
 $('quality').value = params.get('quality') || localStorage.getItem('omsi.quality') || (touchDevice ? 'low' : 'high');
 $('map').addEventListener('change', () => showMap());
+// the date and time of the start (the map's own when not set)
+let timeSet = localStorage.getItem('omsi.tset') === '1';
+function renderTime() {
+  $('t-std').classList.toggle('on', !timeSet); $('t-set').classList.toggle('on', timeSet); $('t-fields').hidden = !timeSet;
+}
+$('t-std').addEventListener('click', () => { timeSet = false; localStorage.setItem('omsi.tset', '0'); renderTime(); });
+$('t-set').addEventListener('click', () => { timeSet = true; localStorage.setItem('omsi.tset', '1'); renderTime(); });
+$('t-date').value = localStorage.getItem('omsi.date') || '1989-05-30';
+$('t-time').value = localStorage.getItem('omsi.time') || '09:00';
+for (const id of ['t-date', 't-time']) $(id).addEventListener('change', () => localStorage.setItem(id === 't-date' ? 'omsi.date' : 'omsi.time', $(id).value));
+renderTime();
 function renderMaps() {
   const sel = $('map');
   const opts = [{ v: MAP, l: config.title || MAP }, ...mods.flatMap((m) => m.maps.map((x) => ({ v: x.file, l: `${x.name} · ${m.name}` })))];
@@ -574,6 +573,7 @@ async function play() {
     const { base, extras } = await getPack();
     const args = ['--map', $('map').value || MAP, '--bus', chosen, '--no-menu'];
     if (name) args.push('--lan-name', name);
+    if (timeSet && mode !== 'join') { if ($('t-time').value) args.push('--time', $('t-time').value); if ($('t-date').value) args.push('--date', $('t-date').value); }
     if (mode === 'join') {
       // open the channel to the host first: the game's session starts on it
       step(2); progress(null);

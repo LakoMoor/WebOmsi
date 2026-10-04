@@ -13,7 +13,8 @@
       "desc": {
         "en": "A 10.6 m city bus with an automatic gearbox: a good bus to learn on. Doors on the right, the driver's seat on the left, seats for 40 passengers.",
         "ru": "Городской автобус 10,6 м с автоматической коробкой: на нём удобно учиться. Двери справа, место водителя слева, салон на 40 пассажиров."
-      }
+      },
+      "preview": "previews/demo_city.jpg"
     },
     {
       "file": "Vehicles/DemoBus/demo_mini.bus",
@@ -26,7 +27,8 @@
       "desc": {
         "en": "A 7.4 m minibus: light, quick and easy to turn in the village streets.",
         "ru": "Микроавтобус 7,4 м: лёгкий, быстрый, легко поворачивает на улицах деревни."
-      }
+      },
+      "preview": "previews/demo_mini.jpg"
     },
     {
       "file": "Vehicles/DemoBus/demo_long.bus",
@@ -39,7 +41,8 @@
       "desc": {
         "en": "A 12.2 m bus with six rows of seats and the most power of the four; it needs a longer braking distance.",
         "ru": "Автобус 12,2 м с шестью рядами сидений и самым мощным мотором из четырёх; тормозной путь у него длиннее."
-      }
+      },
+      "preview": "previews/demo_long.jpg"
     },
     {
       "file": "Vehicles/DemoBus/demo_double.bus",
@@ -52,7 +55,8 @@
       "desc": {
         "en": "A 10.4 m double-decker with seats on both decks. High and heavy: take the corners slowly.",
         "ru": "Двухэтажный автобус 10,4 м с сиденьями на обеих палубах. Высокий и тяжёлый: поворачивайте медленно."
-      }
+      },
+      "preview": "previews/demo_double.jpg"
     }
   ],
   "servers": [],
@@ -60,5 +64,6 @@
   "mapInfo": {
     "en": "Demo village: a loop of road with houses, trees and a bus stop, made for this site. Drive round it, try the buses, or meet friends here in multiplayer.",
     "ru": "Деревня Demo: петля дороги с домами, деревьями и остановкой, сделанная для этого сайта. Покатайтесь по ней, попробуйте автобусы или встретьтесь здесь с друзьями в мультиплеере."
-  }
+  },
+  "mapPreview": "previews/demo_map.jpg"
 }
