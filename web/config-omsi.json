@@ -1,5 +1,4 @@
 {
-  "packUrl": "./pack.zip",
   "map": "maps/Grundorf/global.cfg",
   "title": "Grundorf",
   "buses": [
@@ -31,5 +30,6 @@
       "kw": 150
     }
   ],
-  "servers": []
+  "servers": [],
+  "packDir": "./pack-omsi/"
 }

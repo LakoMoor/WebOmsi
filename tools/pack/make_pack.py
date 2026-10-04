@@ -57,7 +57,7 @@ def closure(seeds):
         if p in seen or p not in idx.values():
             continue
         seen.add(p)
-        if p.lower().rsplit('.', 1)[-1] in ('sco', 'o3d', 'sli', 'cfg', 'bus', 'osc', 'ovh', 'scr', 'map'):
+        if p.lower().rsplit('.', 1)[-1] in ('sco', 'o3d', 'x', 'cti', 'sli', 'cfg', 'bus', 'osc', 'ovh', 'scr', 'map'):
             try:
                 data = open(os.path.join(R, p), 'rb').read()
             except OSError:
@@ -70,11 +70,16 @@ def closure(seeds):
                 if r:
                     if r not in seen:
                         todo.append(r)
-                elif h:
-                    # not where it is said to be: the same name anywhere in the add-on's own folder
+                else:
+                    # not where it is said to be: the same name inside the add-on's own folder, else
+                    # in a texture or sound folder of the game (a sign object that borrows a texture
+                    # of another object)
                     base = os.path.basename(name.decode('latin1').replace('\\', '/').strip()).lower()
-                    for c in byname.get(base, []):
-                        if c.startswith(h + '/') and c not in seen:
+                    cands = byname.get(base, [])
+                    own = [c for c in cands if h and c.startswith(h + '/')]
+                    shared = [c for c in cands if re.search(r'/(texture|sound|sounds)/', c.lower() + '/') or c.lower().startswith(('texture/', 'sounds/'))]
+                    for c in (own or shared[:1]):
+                        if c not in seen:
                             todo.append(c)
     return seen
 
