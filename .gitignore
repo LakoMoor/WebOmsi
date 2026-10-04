@@ -24,3 +24,4 @@ tools/greenteaspeak-plugin/*.zip
 /web/demo-pack.zip
 /web/config-omsi.json.local
 .DS_Store
+/web/pack/

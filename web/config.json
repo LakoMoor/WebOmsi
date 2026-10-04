@@ -1,5 +1,4 @@
 {
-  "packUrl": "./demo-pack.zip",
   "map": "maps/Demo/global.cfg",
   "title": "Demo village",
   "buses": [
@@ -40,5 +39,6 @@
       "kw": 190
     }
   ],
-  "servers": []
+  "servers": [],
+  "packDir": "./pack/"
 }

@@ -50,13 +50,14 @@
   </div>
 
   <section class="panel" id="panel">
+    <div class="titlebar"><span data-i18n="menu_title">WebOmsi - Main menu</span><span class="tb-dots" aria-hidden="true"><i></i><i></i><i></i></span></div>
     <header class="brand">
       <div class="logo"><svg viewBox="0 0 48 48"><rect x="4" y="10" width="40" height="26" rx="6" fill="#fff"/><rect x="8" y="15" width="32" height="10" rx="2" fill="#f47f30"/><circle cx="15" cy="38" r="4.5" fill="#14171c" stroke="#fff" stroke-width="2"/><circle cx="33" cy="38" r="4.5" fill="#14171c" stroke="#fff" stroke-width="2"/></svg></div>
       <div>
         <h1>Web<b>Omsi</b></h1>
         <p id="subtitle" data-i18n="tagline">A bus simulator in your browser</p>
       </div>
-      <button id="lang" class="chip" title="Language">RU</button>
+      <span class="chips-right"><button id="theme" class="chip" title="Theme">Modern</button><button id="lang" class="chip" title="Language">RU</button></span>
     </header>
 
     <div class="seg" role="tablist">
@@ -76,10 +77,12 @@
       <summary><span data-i18n="own_title">Your own files</span> <span id="own-count" class="badge" hidden></span></summary>
       <p class="muted" data-i18n="own_lead">Add a zip with a map, a bus or a whole OMSI folder. It stays in your browser.</p>
       <label id="drop" class="drop" for="ownfile">
-        <b data-i18n="own_drop">Drop zip files here or tap to choose</b>
+        <b data-i18n="own_drop2">Drop zip files or a folder here, or tap to choose</b>
         <span data-i18n="own_hint">maps, buses, mods; several files at once</span>
       </label>
       <input id="ownfile" type="file" accept=".zip,application/zip" multiple hidden>
+      <input id="ownfolder" type="file" webkitdirectory multiple hidden>
+      <label class="chip folderbtn" for="ownfolder" data-i18n="pick_folder">Choose a folder</label>
       <ul id="own-list" class="own-list"></ul>
       <button id="own-how" class="link" data-i18n="own_how">How do I make a zip?</button>
     </details>
@@ -134,7 +137,7 @@
     <div id="progress" hidden>
       <div class="track" id="track"><i id="fill"></i></div>
       <ol id="steps"></ol>
-      <p id="status"></p>
+      <p id="status" class="status"></p>
     </div>
     <p id="error" class="error" hidden></p>
 

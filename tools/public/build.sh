@@ -1,5 +1,7 @@
 #!/bin/bash
-# Makes the public pack (original content, CC0) and zips it for the page: web/demo-pack.zip
+# Makes the public pack (original content, CC0): the folder public-pack, a zip of it
+# (web/demo-pack.zip) and the same files with a manifest for the page to download one by one
+# with a progress bar (web/pack/).
 set -e
 cd "$(dirname "$0")"
 rm -rf ../../public-pack
@@ -27,4 +29,21 @@ with zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as z:
             p = os.path.join(dp, f)
             z.write(p, os.path.relpath(p, src)); n += 1
 print(n, 'files ->', out, round(os.path.getsize(out) / 1e6, 2), 'MB')
+PY
+python3 - <<'PY'
+import hashlib, json, os, shutil
+src, out = 'public-pack', 'web/pack'
+shutil.rmtree(out, ignore_errors=True)
+files = []
+for dp, _, fs in os.walk(src):
+    for f in sorted(fs):
+        p = os.path.join(dp, f)
+        rel = os.path.relpath(p, src).replace(os.sep, '/')
+        os.makedirs(os.path.dirname(os.path.join(out, rel)), exist_ok=True)
+        shutil.copy2(p, os.path.join(out, rel))
+        files.append([rel, os.path.getsize(p)])
+files.sort()
+ident = hashlib.sha1(json.dumps(files).encode()).hexdigest()[:12]
+json.dump({'id': ident, 'files': files}, open(os.path.join(out, 'manifest.json'), 'w'), separators=(',', ':'))
+print(len(files), 'files ->', out, '(manifest', ident + ')')
 PY

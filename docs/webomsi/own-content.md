@@ -10,7 +10,7 @@ storage; nothing is uploaded anywhere.
 ## 1. Add a zip
 
 1. Open the start screen and expand **Your own files**.
-2. Drop the zip files onto the box (or tap it and choose them). Several at once are fine.
+2. Drop the zip files **or a folder** onto the box (or tap it and choose them; *Choose a folder* picks a whole folder, for example an unpacked mod). Several at once are fine. A folder is put together into one archive in the browser, with a progress bar.
 3. The page reads each zip and tells you what it found (`2 maps · 3 buses`). The maps appear in the **Map** list, the
    buses among the bus cards (marked *your files*).
 4. Choose a map and a bus and press **Play**.

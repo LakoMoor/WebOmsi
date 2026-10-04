@@ -19,6 +19,7 @@ const audioContexts = [];
 // any folder, for example https://<user>.github.io/<repo>/.
 import { scan } from './zipscan.js';
 import * as rtc from './rtc.js';
+import { downloadAsZip, filesToZip, readDropped } from './zipbuild.js';
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 const touchDevice = (matchMedia('(pointer: coarse)').matches && navigator.maxTouchPoints > 0) || params.get('touch') === '1';
@@ -64,6 +65,7 @@ const T = {
     e_code: 'Enter the room code.', e_relay: 'The room relay could not be reached.', hosting: 'Room open',
     mp_public: 'Public', pub_empty: 'Nobody is hosting right now. Host a room (and list it) or join by code.', pub_note: 'The list is made by the hosts themselves and is not checked: join people you trust.',
     list_public: 'Show my room in the public list', room_name_ph: 'Room name', join_btn: 'Join', kind_room: 'browser room', kind_server: 'server', verified: 'official',
+    files_n2: 'Files', loading_files: 'Downloading the game files', pick_folder: 'Choose a folder', own_drop2: 'Drop zip files or a folder here, or tap to choose', building: 'Putting the files together…', theme_classic: 'Classic', theme_modern: 'Modern', menu_title: 'WebOmsi - Main menu',
     kb: [['W / S', 'gas / brake'], ['A / D', 'steering'], ['Space', 'parking brake'], ['Shift+U', 'start the bus'], ['Shift+1', 'doors'], ['H', 'horn'], ['Z / X / C', 'indicators / hazards'], ['F1', 'cameras'], ['Esc', 'game menu'], ['Mouse', 'look round, press cab buttons']],
     ts: [['Wheel', 'drag the steering wheel, left'], ['Pedals', 'BRAKE and GAS, right'], ['R N D', 'gearbox buttons'], ['P', 'parking brake'], ['Finger', 'look round; two fingers zoom']],
   },
@@ -105,6 +107,7 @@ const T = {
     e_code: 'Введите код комнаты.', e_relay: 'Не удалось связаться с релеем комнат.', hosting: 'Комната открыта',
     mp_public: 'Публичные', pub_empty: 'Сейчас никто не хостит. Создайте комнату (и покажите её в списке) или войдите по коду.', pub_note: 'Список составляют сами хосты, он не проверяется: заходите к тем, кому доверяете.',
     list_public: 'Показывать мою комнату в публичном списке', room_name_ph: 'Название комнаты', join_btn: 'Войти', kind_room: 'комната в браузере', kind_server: 'сервер', verified: 'официальный',
+    files_n2: 'Файлы', loading_files: 'Загрузка файлов игры', pick_folder: 'Выбрать папку', own_drop2: 'Перетащите сюда zip или папку, либо нажмите и выберите', building: 'Собираю файлы вместе…', theme_classic: 'Классика', theme_modern: 'Современный', menu_title: 'WebOmsi - Главное меню',
     kb: [['W / S', 'газ / тормоз'], ['A / D', 'руль'], ['Space', 'стояночный тормоз'], ['Shift+U', 'запустить автобус'], ['Shift+1', 'двери'], ['H', 'гудок'], ['Z / X / C', 'поворотники / аварийка'], ['F1', 'камеры'], ['Esc', 'меню игры'], ['Мышь', 'осмотреться, нажимать кнопки кабины']],
     ts: [['Руль', 'ведите по рулю, слева'], ['Педали', 'BRAKE и GAS, справа'], ['R N D', 'кнопки коробки передач'], ['P', 'стояночный тормоз'], ['Палец', 'осмотреться; двумя пальцами - приблизить']],
   },
@@ -126,12 +129,21 @@ function keysTable(rows) {
   }
   return d;
 }
+// the look: the classic one (in the manner of OMSI 2's menus) or the modern one
+let theme = localStorage.getItem('omsi.theme') || 'classic';
+function applyTheme() {
+  document.body.classList.toggle('classic', theme === 'classic');
+  $('theme').textContent = theme === 'classic' ? t('theme_modern') : t('theme_classic');
+  document.querySelector('meta[name=theme-color]').content = theme === 'classic' ? '#1b2a44' : '#0e1116';
+}
+$('theme').addEventListener('click', () => { theme = theme === 'classic' ? 'modern' : 'classic'; localStorage.setItem('omsi.theme', theme); applyTheme(); });
 function applyLang() {
   document.documentElement.lang = lang;
   document.querySelectorAll('[data-i18n]').forEach((e) => { e.textContent = t(e.dataset.i18n); });
   document.querySelectorAll('[data-i18n-ph]').forEach((e) => { e.placeholder = t(e.dataset.i18nPh); });
   document.querySelectorAll('[data-i18n-title]').forEach((e) => { e.title = t(e.dataset.i18nTitle); });
   $('lang').textContent = lang === 'ru' ? 'EN' : 'RU';
+  applyTheme();
   for (const id of ['how-kbd', 'help-kbd']) $(id).replaceChildren(keysTable(T[lang].kb));
   for (const id of ['how-touch', 'help-touch']) $(id).replaceChildren(keysTable(T[lang].ts));
   if (config.title) $('subtitle').textContent = t('tagline') + ' · ' + config.title;
@@ -148,8 +160,13 @@ const configName = (params.get('config') || 'config.json').replace(/[^A-Za-z0-9_
 try { const r = await fetch('./' + configName, { cache: 'no-cache' }); if (r.ok) config = await r.json(); } catch (_) {}
 const MAP = config.map || 'maps/Demo/global.cfg';
 const packUrl = params.get('pack') || config.packUrl || './demo-pack.zip';
+// the site's own content: a folder of files and a manifest (listed with their sizes), downloaded one
+// by one with a progress bar; or, for a site that has it that way, one zip
+const packDir = params.get('packdir') || config.packDir || '';
+let manifest = null;
+if (packDir) { try { const r = await fetch(packDir.replace(/\/?$/, '/') + 'manifest.json', { cache: 'no-cache' }); if (r.ok) manifest = await r.json(); } catch (_) {} }
 const CACHE = 'omsi-pack-v1';
-const KEY = './__pack__/' + encodeURIComponent(packUrl);
+const KEY = './__pack__/' + (manifest ? 'dir-' + manifest.id : encodeURIComponent(packUrl));
 document.title = 'WebOmsi' + (config.title ? ' - ' + config.title : '');
 
 // ---- bus pictures ------------------------------------------------------------------------------
@@ -214,17 +231,21 @@ function renderMaps() {
   sel.value = opts.some((o) => o.v === want) ? want : MAP;
   $('map-field').hidden = opts.length < 2;
 }
+let mpMode = params.get('server') ? 'server' : (params.get('room') ? 'join' : 'public');
 let multi = !!params.get('server') || !!params.get('room');
+// the Play button: always, except on the public list (it has a Join button on every line)
+function updateGo() { $('go').hidden = multi && mpMode === 'public'; }
 function setMode(m) {
   multi = m; $('tab-solo').classList.toggle('on', !m); $('tab-multi').classList.toggle('on', m);
   $('multi').hidden = !m;
+  updateGo();
+  if (m && mpMode === 'public') watchLobby();
 }
 $('tab-solo').addEventListener('click', () => setMode(false));
 $('tab-multi').addEventListener('click', () => setMode(true));
 setMode(multi);
 
 // ---- multiplayer: join a room, host a room, or a server's address ----------------------------------------
-let mpMode = params.get('server') ? 'server' : (params.get('room') ? 'join' : 'public');
 let hostCode = rtc.newRoomCode();
 const inviteLink = (code) => `${location.origin}${location.pathname}?room=${code}`;
 const roomParam = rtc.cleanCode(params.get('room'));
@@ -233,7 +254,7 @@ function setMp(mode) {
   mpMode = mode;
   document.querySelectorAll('#mp-mode button').forEach((b) => b.classList.toggle('on', b.dataset.mode === mode));
   $('mp-public').hidden = mode !== 'public'; $('mp-join').hidden = mode !== 'join'; $('mp-host').hidden = mode !== 'host'; $('mp-server').hidden = mode !== 'server';
-  $('go').hidden = mode === 'public';
+  updateGo();
   if (mode === 'public') watchLobby();
 }
 
@@ -336,7 +357,7 @@ async function havePackUrl() {
   try { const r = await fetch(packUrl, { method: 'HEAD' }); return r.ok && !/text\/html/.test(r.headers.get('content-type') || ''); } catch (_) { return false; }
 }
 const hasCached = !!(await cachedPack().then((b) => b && b.length));
-const hasUrl = await havePackUrl();
+const hasUrl = manifest ? true : await havePackUrl();
 $('forget').hidden = !hasCached; $('forget-sep').hidden = !hasCached;
 $('forget').addEventListener('click', async () => { await caches.delete(CACHE); mods = []; saveMods(); location.reload(); });
 
@@ -346,26 +367,41 @@ const fmtMB = (n) => (n >= 1e9 ? (n / 1e9).toFixed(2) + ' GB' : (n / 1e6).toFixe
 async function modBytes(m) {
   try { const c = await caches.open(CACHE); const r = await c.match(MOD_PREFIX + m.id); return r ? new Uint8Array(await r.arrayBuffer()) : null; } catch (_) { return null; }
 }
+// one thing the player added, as the bytes of a zip: read what is in it, keep it in the browser
+async function keepMod(name, bytes) {
+  if (bytes.length > 1.5e9) toast(t('big'), 4500);
+  if (!looksLikeZip(bytes)) throw new Error(`${name}: ${t('bad_zip')}`);
+  const info = await scan(bytes);
+  if (!info.maps.length && !info.buses.length && !info.folders.length) throw new Error(`${t('nothing')} ${name}`);
+  const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  const c = await caches.open(CACHE);
+  await c.put(MOD_PREFIX + id, new Response(bytes, { headers: { 'content-type': 'application/zip' } }));
+  mods.push({ id, name, size: bytes.length, maps: info.maps, buses: info.buses, files: info.files });
+  saveMods();
+  toast(`${t('added')}: ${name}`);
+}
+const finishAdding = () => { $('progress').hidden = true; say(''); renderMods(); renderBuses(); renderMaps(); };
 async function addFiles(files) {
   $('error').hidden = true;
   for (const f of files) {
     try {
       say(`${t('reading')} ${f.name}…`); $('progress').hidden = false; progress(null);
-      const bytes = new Uint8Array(await f.arrayBuffer());
-      if (f.size > 1.5e9) toast(t('big'), 4500);
-      if (!looksLikeZip(bytes)) throw new Error(`${f.name}: ${t('bad_zip')}`);
-      const info = await scan(bytes);
-      if (!info.maps.length && !info.buses.length && !info.folders.length) throw new Error(`${t('nothing')} ${f.name}`);
-      const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-      const c = await caches.open(CACHE);
-      await c.put(MOD_PREFIX + id, new Response(bytes, { headers: { 'content-type': 'application/zip' } }));
-      mods.push({ id, name: f.name, size: f.size, maps: info.maps, buses: info.buses, files: info.files });
-      saveMods();
-      toast(`${t('added')}: ${f.name}`);
+      await keepMod(f.name, new Uint8Array(await f.arrayBuffer()));
     } catch (e) { fail(String((e && e.message) || e)); }
   }
-  $('progress').hidden = true; say('');
-  renderMods(); renderBuses(); renderMaps();
+  finishAdding();
+}
+// loose files or a folder (the ones of a folder the player picked or dropped): put together into a zip
+async function addLoose(list, label) {
+  $('error').hidden = true;
+  if (!list.length) return;
+  try {
+    $('progress').hidden = false; $('track').classList.remove('busy');
+    const bytes = await filesToZip(list, showFiles);
+    say(t('building'));
+    await keepMod(label, bytes);
+  } catch (e) { fail(String((e && e.message) || e)); }
+  finishAdding();
 }
 async function removeMod(id) {
   try { const c = await caches.open(CACHE); await c.delete(MOD_PREFIX + id); } catch (_) {}
@@ -385,9 +421,23 @@ function renderMods() {
   if (n) $('own').open = true;
 }
 $('ownfile').addEventListener('change', (e) => { addFiles([...e.target.files]); e.target.value = ''; });
+$('ownfolder').addEventListener('change', (e) => {
+  const list = [...e.target.files].map((f) => ({ name: f.webkitRelativePath || f.name, file: f }));
+  const label = (list[0] && list[0].name.split('/')[0]) || 'folder';
+  e.target.value = ''; addLoose(list, label);
+});
 for (const ev of ['dragenter', 'dragover']) document.addEventListener(ev, (e) => { if (e.dataTransfer && [...e.dataTransfer.types].includes('Files')) { e.preventDefault(); $('own').open = true; $('drop').classList.add('over'); } });
 for (const ev of ['dragleave', 'drop']) document.addEventListener(ev, (e) => { if (ev === 'dragleave' && e.relatedTarget) return; $('drop').classList.remove('over'); });
-document.addEventListener('drop', (e) => { if (!e.dataTransfer || !e.dataTransfer.files.length) return; e.preventDefault(); addFiles([...e.dataTransfer.files].filter((f) => /\.zip$/i.test(f.name))); });
+document.addEventListener('drop', async (e) => {
+  if (!e.dataTransfer || !e.dataTransfer.files.length) return;
+  e.preventDefault();
+  const items = [...e.dataTransfer.items];
+  const hasFolder = items.some((i) => i.webkitGetAsEntry && i.webkitGetAsEntry() && i.webkitGetAsEntry().isDirectory);
+  if (hasFolder) {
+    const names = items.map((i) => i.webkitGetAsEntry && i.webkitGetAsEntry()).filter(Boolean).map((x) => x.name);
+    addLoose(await readDropped(items), names[0] || 'folder');
+  } else addFiles([...e.dataTransfer.files].filter((f) => /\.zip$/i.test(f.name)));
+});
 
 // ---- the guide ----------------------------------------------------------------------------------------
 function fmt(text) {
@@ -419,10 +469,15 @@ async function getPack() {
   let base = await cachedPack();
   if (!looksLikeZip(base)) {
     if (hasUrl) {
-      base = await download(packUrl, (got, total) => {
-        progress(total ? got / total : null);
-        say(`${t('dl')}: ${(got / 1e6).toFixed(1)}${total ? ' / ' + (total / 1e6).toFixed(1) : ''} MB`);
-      });
+      if (manifest) {
+        $('track').classList.remove('busy');
+        base = await downloadAsZip(packDir.replace(/\/?$/, '/'), manifest.files, showFiles);
+      } else {
+        base = await download(packUrl, (got, total) => {
+          progress(total ? got / total : null);
+          say(`${t('dl')}: ${(got / 1e6).toFixed(1)}${total ? ' / ' + (total / 1e6).toFixed(1) : ''} MB`);
+        });
+      }
       if (!looksLikeZip(base)) throw new Error(t('broken'));
       await storePack(base);
     } else if (extras.length) {
@@ -433,6 +488,12 @@ async function getPack() {
     }
   }
   return { base, extras };
+}
+
+// the progress of a download of many files: a bar by bytes, and what is going on
+function showFiles(p) {
+  progress(p.totalBytes ? p.bytes / p.totalBytes : p.done / p.total);
+  say(`${t('loading_files')}: ${p.done} / ${p.total} · ${fmtMB(p.bytes)} / ${fmtMB(p.totalBytes)}\n${p.name}`);
 }
 
 // ---- progress, errors ---------------------------------------------------------------------------------

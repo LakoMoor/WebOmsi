@@ -40,6 +40,8 @@ body { position: fixed; inset: 0; overflow: hidden; }
 .brand h1 b { color: var(--accent); font-weight: 800; }
 .brand p { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
 .brand .chip { margin-left: auto; }
+.chips-right { margin-left: auto; display: flex; gap: 6px; } .chips-right .chip { margin-left: 0; }
+.titlebar { display: none; }
 h3 { margin: 18px 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; }
 h2 { margin: 0 0 12px; }
 
@@ -153,3 +155,53 @@ input.code, b.code { font: 700 20px ui-monospace, SFMono-Regular, Menlo, monospa
 label.check { display: flex; align-items: center; gap: 8px; margin: 12px 0 6px; font-size: 13.5px; color: var(--fg); cursor: pointer; }
 label.check input { width: 18px; height: 18px; accent-color: var(--accent); }
 #room-name { margin-top: 4px; }
+
+#status.status { white-space: pre-line; word-break: break-all; }
+.folderbtn { display: inline-block; margin-top: 8px; }
+
+/* ---- the classic theme: steel grey, bevelled buttons, list boxes - in the manner of OMSI 2's own menus ---- */
+body.classic { --panel: #2f3238; --line: #0e0f11; --fg: #e4e7eb; --muted: #9aa1ab; --accent: #f2c14e; --accent-2: #f2c14e; --r: 0;
+  font: 13px/1.4 Tahoma, Verdana, "Segoe UI", Arial, sans-serif; }
+body.classic #menu { background: linear-gradient(#0a101c, #1b2a44 55%, #3b3b3b); }
+body.classic .sun { display: none; }
+body.classic .hills { opacity: .5; }
+body.classic .panel { border-radius: 0; background: #2f3238; border: 2px solid; border-color: #868b94 #15171a #15171a #868b94;
+  box-shadow: 0 0 0 1px #000, 0 24px 70px #000d; backdrop-filter: none; -webkit-backdrop-filter: none; }
+body.classic .titlebar { display: flex; align-items: center; justify-content: space-between; margin: -22px -22px 16px; padding: 5px 10px;
+  background: linear-gradient(#4e73ab, #233a5f); color: #fff; font-weight: 700; font-size: 12.5px; border-bottom: 1px solid #0e0f11; }
+body.classic .tb-dots { display: flex; gap: 4px; } body.classic .tb-dots i { width: 14px; height: 12px; background: #c9ccd2; border: 1px solid #fff; border-color: #fff #3a3d44 #3a3d44 #fff; }
+body.classic .logo { border-radius: 0; background: #14161a; border: 1px solid #6a6f78; }
+body.classic .brand h1 { font-size: 20px; letter-spacing: 0; }
+body.classic .seg { background: none; padding: 0; gap: 2px; border-bottom: 2px solid #868b94; border-radius: 0; margin-top: 12px; }
+body.classic .seg button { border-radius: 0; background: #3b3f46; border: 2px solid; border-color: #868b94 #15171a transparent #868b94; margin-bottom: -2px; padding: 6px 14px; color: #c5c9cf; font-weight: 600; box-shadow: none; }
+body.classic .seg button.on { background: #2f3238; color: #fff; padding-bottom: 8px; }
+body.classic .seg.small button { padding: 5px 9px; }
+body.classic h3 { color: #e4e7eb; text-transform: none; letter-spacing: 0; font-size: 12.5px; border-bottom: 1px solid #565b63; padding-bottom: 3px; margin: 16px 0 8px; }
+body.classic .buses { gap: 0; border: 2px solid; border-color: #15171a #868b94 #868b94 #15171a; background: #1d1f23; max-height: 270px; overflow: auto; }
+body.classic .bus { border: 0; border-bottom: 1px solid #2c2f35; border-radius: 0; background: transparent; grid-template-columns: 74px 1fr; padding: 5px 10px; transform: none !important; box-shadow: none !important; }
+body.classic .bus:hover { background: #2a2d33; }
+body.classic .bus:has(input:checked) { background: #2b63ad; color: #fff; }
+body.classic .bus:has(input:checked) .info { color: #dbe8fa; }
+body.classic .bus svg { width: 74px; height: 36px; }
+body.classic .tag { border-radius: 0; background: #3a3e45; color: #d7dbe0; }
+body.classic .bus:has(input:checked) .tag { background: #1d4a8a; color: #fff; }
+body.classic input[type=text], body.classic select { border-radius: 0; background: #1d1f23; border: 2px solid; border-color: #15171a #868b94 #868b94 #15171a; color: #fff; font-size: 13px; padding: 6px 8px; }
+body.classic input:focus, body.classic select:focus { outline: 1px dotted #fff; outline-offset: -4px; }
+body.classic .btn, body.classic .chip, body.classic .lobby li button, body.classic .own-list li button, body.classic .toolbar button {
+  border-radius: 0; background: linear-gradient(#5b6069, #3b3f46); color: #fff; border: 2px solid; border-color: #a4a9b2 #15171a #15171a #a4a9b2; box-shadow: none; }
+body.classic .btn:active, body.classic .chip:active, body.classic .lobby li button:active, body.classic .toolbar button:active { border-color: #15171a #a4a9b2 #a4a9b2 #15171a; }
+body.classic .btn.primary { color: #f6e3a8; font-size: 15px; padding: 10px; filter: none; }
+body.classic .btn.secondary { color: #fff; font-weight: 600; }
+body.classic details.own, body.classic .roombox, body.classic .lobby li, body.classic .drop, body.classic .own-list li, body.classic .error {
+  border-radius: 0; border: 2px solid; border-color: #15171a #868b94 #868b94 #15171a; background: #262930; }
+body.classic .error { color: #ffc9c9; background: #3a1f22; }
+body.classic .drop { border-style: solid; }
+body.classic .track { border-radius: 0; height: 18px; background: #1d1f23; border: 2px solid; border-color: #15171a #868b94 #868b94 #15171a; padding: 1px; }
+body.classic .track i { border-radius: 0; background: repeating-linear-gradient(90deg, #2b63ad 0 10px, #3d7bd0 10px 12px); }
+body.classic #steps li.done { color: #9fe0aa; }
+body.classic .sheet-card { border-radius: 0; border: 2px solid; border-color: #868b94 #15171a #15171a #868b94; background: #2f3238; }
+body.classic .toolbar button { width: 38px; height: 38px; font-size: 16px; }
+body.classic .toolbar .roomchip { width: auto; }
+body.classic .badge { border-radius: 0; }
+body.classic details.how, body.classic footer { color: #9aa1ab; }
+body.classic kbd { border-radius: 0; background: #3b3f46; border-color: #868b94 #15171a #15171a #868b94; }
