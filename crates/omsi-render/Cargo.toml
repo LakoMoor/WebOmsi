@@ -6,6 +6,7 @@ license.workspace = true
 description = "wgpu renderer: textured, lit meshes with OMSI alpha modes; on-screen and off-screen targets"
 
 [dependencies]
+web-time = "1"
 omsi-cfg = { path = "../omsi-cfg" }
 omsi-geometry = { path = "../omsi-geometry" }
 omsi-texture = { path = "../omsi-texture" }
@@ -18,6 +19,11 @@ hashbrown.workspace = true
 log.workspace = true
 anyhow.workspace = true
 winit.workspace = true
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wgpu = { workspace = true, features = ["webgpu", "webgl", "fragile-send-sync-non-atomic-wasm"] }
+wasm-bindgen = "0.2"
+web-sys = { version = "0.3", features = ["Window", "Document", "HtmlCanvasElement"] }
 
 [target.'cfg(windows)'.dependencies]
 windows = { version = "0.62", features = ["Win32_Graphics_Dxgi", "Win32_Foundation"] }

@@ -156,7 +156,7 @@ impl MapIndex {
         /// What one tile adds besides its own index part: its rows (key, spline, start
         /// distance, interval) and its repeaters (master key, spline, first object index).
         type RowParts = (Vec<((usize, i64), i64, f64, f64)>, Vec<((usize, i64), i64, usize)>);
-        let t0 = std::time::Instant::now();
+        let t0 = web_time::Instant::now();
         let signal_types = parking_lot::Mutex::new(HashMap::new());
         // (per tile: the parents its children name a light of, and its objects' files - the
         // objects by id, the files once each - to tell afterwards which of those parents
@@ -742,12 +742,24 @@ type Batch = (Vec<(i32, i32)>, Vec<crate::scene::Prepared>, crate::scene::LoadSt
 /// the cores, so that the frame's parallel work (culling, the AI scripts) never waits for a
 /// tile to finish on the shared pool - and at a lower priority, so that they do not take
 /// the cores those workers need either (see `threads`).
+#[cfg(not(target_arch = "wasm32"))]
 fn loader_pool() -> &'static rayon::ThreadPool {
+    use crate::threads::WebPool;
     static POOL: std::sync::OnceLock<rayon::ThreadPool> = std::sync::OnceLock::new();
     POOL.get_or_init(|| {
         let n = (std::thread::available_parallelism().map(|n| n.get()).unwrap_or(4) / 3).max(2);
-        rayon::ThreadPoolBuilder::new().num_threads(n).thread_name(|i| format!("tile loader {i}")).start_handler(|_| crate::threads::lower_thread_priority()).build().expect("tile loader pool")
+        rayon::ThreadPoolBuilder::new().num_threads(n).use_current_thread_on_web().thread_name(|i| format!("tile loader {i}")).start_handler(|_| crate::threads::lower_thread_priority()).build().expect("tile loader pool")
     })
+}
+
+/// Run a tile job on the loader's pool (a page has one thread: right here).
+fn install_loader<R: Send>(op: impl FnOnce() -> R + Send) -> R {
+    #[cfg(target_arch = "wasm32")]
+    {
+        op()
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    loader_pool().install(op)
 }
 
 /// Candidates whose tile rectangles may touch `radius` around a center. The exact
@@ -827,19 +839,19 @@ pub struct Streamer {
     /// lists), in ms, and how often it took more than 16 ms.
     pub worst_frame_ms: f64,
     pub slow_frames: usize,
-    started: std::time::Instant,
-    last_summary: std::time::Instant,
+    started: web_time::Instant,
+    last_summary: web_time::Instant,
     /// First-area diagnostics are deliberately tiny: one progress line per tile and a
     /// rate-limited stall line. They exist only while the loading screen is up.
     initial_last_done: usize,
-    initial_last_progress: std::time::Instant,
-    initial_last_stall_log: Option<std::time::Instant>,
+    initial_last_progress: web_time::Instant,
+    initial_last_stall_log: Option<web_time::Instant>,
     /// The worker batch currently being prepared, for a useful stall message.
-    inflight_batch: Option<(Vec<(i32, i32)>, std::time::Instant)>,
+    inflight_batch: Option<(Vec<(i32, i32)>, web_time::Instant)>,
     /// One initial tile may take several frames to upload/place; time it across those frames.
-    initial_upload: Option<((i32, i32), std::time::Instant)>,
+    initial_upload: Option<((i32, i32), web_time::Instant)>,
     /// Tiles loaded and unloaded when the heap's free pages were last given back, and when.
-    relieved_at: (usize, usize, std::time::Instant),
+    relieved_at: (usize, usize, web_time::Instant),
 }
 
 impl Streamer {
@@ -872,14 +884,14 @@ impl Streamer {
             worst_upload_ms: 0.0,
             worst_frame_ms: 0.0,
             slow_frames: 0,
-            started: std::time::Instant::now(),
-            last_summary: std::time::Instant::now(),
+            started: web_time::Instant::now(),
+            last_summary: web_time::Instant::now(),
             initial_last_done: 0,
-            initial_last_progress: std::time::Instant::now(),
+            initial_last_progress: web_time::Instant::now(),
             initial_last_stall_log: None,
             inflight_batch: None,
             initial_upload: None,
-            relieved_at: (0, 0, std::time::Instant::now()),
+            relieved_at: (0, 0, web_time::Instant::now()),
         };
         let first: hashbrown::HashSet<(i32, i32)> = s.tiles.iter().filter(|t| Self::nearest(centers, t.0, t.1) <= initial_radius.min(load_radius)).map(|t| (t.0, t.1)).collect();
         log::info!("tile streaming: {} tiles in the map, load radius {:.0} m around {} points ({} tiles now), first area {} tiles", s.tiles.len(), load_radius, centers.len(), s.tiles.iter().filter(|t| Self::nearest(centers, t.0, t.1) <= load_radius).count(), first.len());
@@ -976,7 +988,7 @@ impl Streamer {
             self.stats.add_prepared(&stats);
             self.queue.extend(prepared.into_iter().map(|p| self.world.begin_upload(p)));
         }
-        let t0 = std::time::Instant::now();
+        let t0 = web_time::Instant::now();
         let mut uploaded = 0usize;
         let mut freed_types = false;
         let deadline = t0 + budget;
@@ -984,7 +996,7 @@ impl Streamer {
             let key = p.key();
             let initial = self.initial.as_ref().map(|(set, _)| set.contains(&key)).unwrap_or(false);
             if initial && self.initial_upload.as_ref().map(|(k, _)| *k) != Some(key) {
-                self.initial_upload = Some((key, std::time::Instant::now()));
+                self.initial_upload = Some((key, web_time::Instant::now()));
             }
             if !initial && Self::nearest(centers, key.0, key.1) > self.unload_radius {
                 // gone out of range while it was being prepared: what it already holds on
@@ -994,7 +1006,7 @@ impl Streamer {
                 changed = true;
                 continue;
             }
-            let t = std::time::Instant::now();
+            let t = web_time::Instant::now();
             // its new textures and object types first, then the tile itself, a little a frame
             let ready = self.world.upload_step(renderer, scene, &mut p, Some(deadline)) && self.world.place_step(renderer, scene, &mut p, Some(deadline));
             let ms = t.elapsed().as_secs_f64() * 1000.0;
@@ -1048,12 +1060,12 @@ impl Streamer {
         // 42 tiles taken away in one frame of 400 ms. Unloading gets its own share of the
         // budget, so that a busy upload queue cannot hold the memory of the old area.
         if self.initial.is_none() {
-            let now = std::time::Instant::now();
+            let now = web_time::Instant::now();
             let unload_deadline = deadline.max(now + budget / 2);
             let mut far: Vec<(f64, (i32, i32))> = self.world.loaded_tiles().into_iter().filter(|k| !self.requested.contains(k)).map(|k| (Self::nearest(centers, k.0, k.1), k)).filter(|(d, _)| *d > self.unload_radius).collect();
             far.sort_by(|a, b| b.0.total_cmp(&a.0));
             for (_, key) in far {
-                if unloaded > 0 && std::time::Instant::now() >= unload_deadline {
+                if unloaded > 0 && web_time::Instant::now() >= unload_deadline {
                     break;
                 }
                 freed_types |= self.world.unload_tile(renderer, scene, key, audio);
@@ -1077,12 +1089,12 @@ impl Streamer {
         // count as the game's memory until they are handed back (half a gigabyte on
         // Ahlheim). At most every few seconds, on a thread of its own.
         if (self.loaded_total, self.unloaded_total) != (self.relieved_at.0, self.relieved_at.1) && self.relieved_at.2.elapsed().as_secs_f32() >= 4.0 && self.queue.is_empty() && !self.inflight {
-            self.relieved_at = (self.loaded_total, self.unloaded_total, std::time::Instant::now());
+            self.relieved_at = (self.loaded_total, self.unloaded_total, web_time::Instant::now());
             self.world.compact_slots(renderer, scene);
             crate::release_free_memory();
         }
         if self.last_summary.elapsed().as_secs_f32() >= 10.0 && omsi_cfg::env::var_os("OMSI_PROFILE").is_some() {
-            self.last_summary = std::time::Instant::now();
+            self.last_summary = web_time::Instant::now();
             let at: Vec<String> = centers.iter().map(|c| format!("({:.0}, {:.0})", c.x, c.y)).collect();
             log::info!("tile streaming at {}: {} loaded / {} unloaded so far; {}", at.join(" "), self.loaded_total, self.unloaded_total, self.world.gpu_summary(scene));
             if omsi_cfg::env::var_os("OMSI_PROFILE").is_some() {
@@ -1104,7 +1116,7 @@ impl Streamer {
         // per frame. Progress is at most one line per initial tile; a genuine stall is one
         // warning after 15 s and then at most one every 30 s.
         if let Some((done, total_initial)) = self.initial.as_ref().map(|(set, done)| (*done, set.len())) {
-            let now = std::time::Instant::now();
+            let now = web_time::Instant::now();
             if done != self.initial_last_done {
                 self.initial_last_done = done;
                 self.initial_last_progress = now;
@@ -1158,19 +1170,26 @@ impl Streamer {
                 let first = self.initial.is_some();
                 if first {
                     log::info!("tile loading: first-area worker batch {:?} started", keys);
-                    self.inflight_batch = Some((keys.clone(), std::time::Instant::now()));
+                    self.inflight_batch = Some((keys.clone(), web_time::Instant::now()));
                 }
-                let spawned = std::thread::Builder::new().name("tile loader".into()).spawn(move || {
-                    let t = std::time::Instant::now();
+                let work = move || {
+                    let t = web_time::Instant::now();
                     // (a panic on a damaged file must not end the streaming: the batch comes
                     // back empty and its tiles are let go)
-                    let made = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| if first { world.prepare_tiles_initial(&batch) } else { loader_pool().install(|| world.prepare_tiles(&batch)) }));
+                    let made = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| if first { world.prepare_tiles_initial(&batch) } else { install_loader(|| world.prepare_tiles(&batch)) }));
                     let (prepared, stats) = made.unwrap_or_else(|_| {
                         log::error!("tile streaming: loading tiles {:?} failed", batch.iter().map(|t| (t.0, t.1)).collect::<Vec<_>>());
                         Default::default()
                     });
                     let _ = tx.send((batch.iter().map(|t| (t.0, t.1)).collect(), prepared, stats, t.elapsed().as_secs_f64()));
-                });
+                };
+                // (a page has one thread: the batch is loaded right here)
+                let spawned = if cfg!(target_arch = "wasm32") {
+                    work();
+                    Ok(())
+                } else {
+                    std::thread::Builder::new().name("tile loader".into()).spawn(work).map(|_| ())
+                };
                 if let Err(e) = spawned {
                     log::warn!("tile loader thread: {e}");
                     self.inflight = false;
@@ -1209,7 +1228,7 @@ mod tests {
     /// tile its ground and water (#923, #925); one without them leaves the map's own.
     #[test]
     fn a_chrono_patch_with_its_own_terrain_and_water_replaces_the_tiles() {
-        let dir = std::env::temp_dir().join(format!("omsi-chrono-terrain-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("omsi-chrono-terrain-{}", omsi_cfg::pid()));
         let (base, c1, c2) = (dir.join("map"), dir.join("map/Chrono/a"), dir.join("map/Chrono/b"));
         for d in [&base, &c1, &c2] {
             std::fs::create_dir_all(d).unwrap();

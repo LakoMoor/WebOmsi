@@ -72,7 +72,7 @@ fn android_main(app: AndroidApp) {
     }
     log::info!("home {:?}, content {}", std::env::var_os("HOME"), content.display());
     omsi_cfg::migrate_legacy_data_dir();
-    let seed = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_nanos() as u64).unwrap_or(1) % 1_000_000_000;
+    let seed = web_time::SystemTime::now().duration_since(web_time::UNIX_EPOCH).map(|d| d.as_nanos() as u64).unwrap_or(1) % 1_000_000_000;
     omsi_script::set_session_seed(seed);
 
     let event_loop = match EventLoop::builder().with_android_app(app).build() {
@@ -127,7 +127,7 @@ impl log::Log for TeeLogger {
         }
         self.system.log(r);
         use std::io::Write;
-        let secs = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs_f64()).unwrap_or(0.0);
+        let secs = web_time::SystemTime::now().duration_since(web_time::UNIX_EPOCH).map(|d| d.as_secs_f64()).unwrap_or(0.0);
         if let Some(f) = self.file.lock().unwrap_or_else(|e| e.into_inner()).as_mut() {
             // (the desktop's env_logger layout: the launcher's `crash_of` reads it)
             let _ = writeln!(f, "[{secs:.3} {:<5} {}] {}", r.level(), r.target(), r.args());
@@ -475,7 +475,7 @@ fn tilt_thread() {
                 enabled = on;
             }
             if !on {
-                std::thread::sleep(std::time::Duration::from_millis(200));
+                omsi_cfg::sleep(std::time::Duration::from_millis(200));
                 continue;
             }
             ALooper_pollOnce(100, std::ptr::null_mut(), std::ptr::null_mut(), std::ptr::null_mut());

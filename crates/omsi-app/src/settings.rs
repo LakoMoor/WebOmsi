@@ -345,7 +345,15 @@ impl Settings {
     }
 
     pub fn load() -> Settings {
-        let Some(p) = Self::path() else { return Settings::default() };
+        let Some(p) = Self::path() else {
+            // a page keeps no settings file: the page's graphics choice decides
+            let mut s = Settings::default();
+            #[cfg(target_arch = "wasm32")]
+            if crate::web::low_quality() {
+                s.apply_safe_gpu(2);
+            }
+            return s;
+        };
         let mut text = std::fs::read_to_string(&p).unwrap_or_default();
         // OMSI_GRAPHICS=vanilla|vanilla_plus|enhanced: another renderer for one run
         if let Ok(g) = omsi_cfg::env::var("OMSI_GRAPHICS") {

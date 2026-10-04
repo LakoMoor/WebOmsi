@@ -20,6 +20,7 @@ path = "src/main.rs"
 winresource = "0.1"
 
 [dependencies]
+web-time = "1"
 omsi-cfg = { path = "../omsi-cfg" }
 omsi-map = { path = "../omsi-map" }
 omsi-scenery = { path = "../omsi-scenery" }
@@ -29,11 +30,11 @@ omsi-texture = { path = "../omsi-texture" }
 omsi-geometry = { path = "../omsi-geometry" }
 omsi-render = { path = "../omsi-render" }
 omsi-sim = { path = "../omsi-sim" }
-omsi-plugin = { path = "../omsi-plugin" }
 omsi-vehicle = { path = "../omsi-vehicle" }
 omsi-content = { path = "../omsi-content" }
 omsi-timetable = { path = "../omsi-timetable" }
 omsi-script = { path = "../omsi-script" }
+omsi-plugin = { path = "../omsi-plugin" }
 omsi-audio = { path = "../omsi-audio" }
 wgpu.workspace = true
 winit.workspace = true
@@ -54,15 +55,19 @@ image.workspace = true
 serde_json = "1"
 ab_glyph = "0.2"
 rustrict = "0.7"
-gilrs = "0.11"
-ureq = { version = "2", default-features = false, features = ["tls"] }
 sha2 = "0.10"
+gilrs = "0.11"
 rust-i18n = "4"
 # updates: the release archives from GitHub
 zip = { version = "2", default-features = false, features = ["deflate"] }
 
 # the desktop's clipboard and file dialogs (a phone has neither in this form)
-[target.'cfg(not(target_os = "android"))'.dependencies]
+# what only a computer has: the plugins (Lua, DLLs), game controllers, the clipboard, file
+# dialogs, an HTTP client for the updater and weather
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+ureq = { version = "2", default-features = false, features = ["tls"] }
+
+[target.'cfg(not(any(target_os = "android", target_arch = "wasm32")))'.dependencies]
 arboard = { version = "3", default-features = false }
 rfd = "0.15"
 
@@ -71,7 +76,7 @@ rfd = "0.15"
 [target.'cfg(any(all(windows, target_arch = "x86_64"), all(target_os = "linux", target_arch = "x86_64"), target_os = "macos"))'.dependencies]
 steamworks = "0.13.1"
 
-[target.'cfg(unix)'.dependencies]
+[target.'cfg(all(unix, not(target_arch = "wasm32")))'.dependencies]
 libc = "0.2"
 
 # Windows: the game controllers through DirectInput, as OMSI reads them (see `dinput`)
@@ -97,3 +102,16 @@ winit = { workspace = true, features = ["android-native-activity"] }
 android_logger = "0.14"
 jni = "0.21"
 ndk-context = "0.1"
+
+# the browser build: random numbers from the page's crypto
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+getrandom = { version = "0.2", features = ["js"] }
+# (every request fails there; see crates/ureq-web)
+ureq-web = { path = "../ureq-web" }
+getrandom04 = { package = "getrandom", version = "0.4", features = ["wasm_js"] }
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+js-sys = "0.3"
+web-sys = { version = "0.3", features = ["Window", "Document", "HtmlCanvasElement", "Element", "Navigator", "Location", "MediaQueryList"] }
+console_error_panic_hook = "0.1"
+console_log = "1"

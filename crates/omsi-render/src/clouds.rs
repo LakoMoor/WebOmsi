@@ -107,6 +107,13 @@ fn parallel_rows<T: Send + Clone + Default>(n: usize, row_len: usize, f: impl Fn
     let mut out = vec![T::default(); n * row_len];
     let threads = std::thread::available_parallelism().map(|n| n.get()).unwrap_or(4).max(1);
     let per = n.div_ceil(threads);
+    // (the browser build has one thread)
+    if cfg!(target_arch = "wasm32") {
+        for (i, row) in out.chunks_mut(row_len).enumerate() {
+            f(i, row);
+        }
+        return out;
+    }
     std::thread::scope(|s| {
         for (k, chunk) in out.chunks_mut(per * row_len).enumerate() {
             let f = &f;

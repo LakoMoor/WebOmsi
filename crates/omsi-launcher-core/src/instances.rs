@@ -274,7 +274,7 @@ pub fn start(game: &Path, args: &[String], d: &crate::Duty, profile: &str) -> Re
     let (slot, log) = free_slot(&running);
     let file = std::fs::File::create(&log).with_context(|| format!("creating {}", log.display()))?;
     let err = file.try_clone()?;
-    let id = format!("{}-{}-{}", now_secs(), std::process::id(), NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed));
+    let id = format!("{}-{}-{}", now_secs(), omsi_cfg::pid(), NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed));
     let child = std::process::Command::new(game).args(args).env("OMSI_INSTANCE", &id).stdout(file).stderr(err).spawn().with_context(|| format!("starting {}", game.display()))?;
     let pid = child.id();
     let process_started = process_start(pid);
@@ -361,12 +361,12 @@ fn end_process(inst: &Instance, grace: std::time::Duration) -> Result<bool> {
         }
         return Ok(true);
     }
-    let t0 = std::time::Instant::now();
+    let t0 = web_time::Instant::now();
     while t0.elapsed() < grace {
         if ended() {
             return Ok(true);
         }
-        std::thread::sleep(std::time::Duration::from_millis(100));
+        omsi_cfg::sleep(std::time::Duration::from_millis(100));
     }
     if ended() {
         return Ok(true);
@@ -441,7 +441,7 @@ mod tests {
     #[cfg(any(target_os = "macos", target_os = "linux"))]
     #[test]
     fn a_reused_process_id_is_not_the_game() {
-        let me = std::process::id();
+        let me = omsi_cfg::pid();
         let started = process_start(me).expect("our own start time");
         assert_eq!(process_start(me), Some(started), "the start time does not change");
         let mut inst = Instance { id: "self".into(), pid: me, process_started: Some(started), ..Default::default() };
@@ -466,11 +466,11 @@ mod tests {
         let pid = other.id();
         let real = process_start(pid);
         #[cfg(any(target_os = "macos", target_os = "linux"))]
-        assert!(real.is_some() && real != process_start(std::process::id()));
+        assert!(real.is_some() && real != process_start(omsi_cfg::pid()));
         let old = Instance { id: "old".into(), pid, process_started: real.map(|t| t.wrapping_sub(5_000_000)), ..Default::default() };
         assert!(!is_that_game(&old));
         assert!(end_process(&old, std::time::Duration::from_millis(300)).is_err());
-        std::thread::sleep(std::time::Duration::from_millis(50));
+        omsi_cfg::sleep(std::time::Duration::from_millis(50));
         assert!(other.try_wait().unwrap().is_none(), "the other program still runs");
         // the entry of that very process is stopped
         #[cfg(any(target_os = "macos", target_os = "linux"))]
@@ -479,7 +479,7 @@ mod tests {
             assert!(is_that_game(&game));
             // not our child: it stays a zombie until this test collects it, and a zombie has
             // ended - the stop sees that at once instead of waiting out its grace time
-            let t0 = std::time::Instant::now();
+            let t0 = web_time::Instant::now();
             assert!(end_process(&game, std::time::Duration::from_secs(5)).unwrap(), "ended by itself (SIGTERM)");
             assert!(t0.elapsed() < std::time::Duration::from_secs(2), "{:?}", t0.elapsed());
             assert!(process_start(pid).is_none(), "a zombie has no start time");
@@ -503,21 +503,21 @@ mod tests {
     #[cfg(unix)]
     #[test]
     fn stop_lets_the_game_finish_and_kills_only_a_stuck_one() {
-        let dir = std::env::temp_dir().join(format!("omsi-stop-test-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("omsi-stop-test-{}", omsi_cfg::pid()));
         std::fs::create_dir_all(&dir).unwrap();
         // a game that writes its summary when asked to quit
         let summary = dir.join("session.json");
         let game = child_game("graceful-test", &format!("trap 'echo done > \"{}\"; exit 0' TERM; while :; do sleep 0.05; done", summary.display()));
-        std::thread::sleep(std::time::Duration::from_millis(200));
-        let t0 = std::time::Instant::now();
+        omsi_cfg::sleep(std::time::Duration::from_millis(200));
+        let t0 = web_time::Instant::now();
         assert!(end_process(&game, std::time::Duration::from_secs(5)).unwrap(), "ended by itself");
         assert!(t0.elapsed() < std::time::Duration::from_secs(3), "no waiting out the grace time: {:?}", t0.elapsed());
         assert_eq!(std::fs::read_to_string(&summary).unwrap().trim(), "done");
         assert!(!is_our_child("graceful-test"), "reaped");
         // a game that does not react is killed once the grace time is over
         let stuck = child_game("stuck-test", "trap '' TERM; exec sleep 30");
-        std::thread::sleep(std::time::Duration::from_millis(200));
-        let t0 = std::time::Instant::now();
+        omsi_cfg::sleep(std::time::Duration::from_millis(200));
+        let t0 = web_time::Instant::now();
         assert!(!end_process(&stuck, std::time::Duration::from_millis(600)).unwrap(), "killed");
         assert!(t0.elapsed() >= std::time::Duration::from_millis(600));
         reap();

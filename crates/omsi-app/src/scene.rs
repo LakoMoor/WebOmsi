@@ -1247,7 +1247,7 @@ impl GpuCache {
         let img = match images.get(&path) {
             Some(i) => i.clone(),
             None => {
-                let t = std::time::Instant::now();
+                let t = web_time::Instant::now();
                 let decoded = if self.fast_loads {
                     omsi_texture::gpu::load_gpu_fast(&path)
                 } else {
@@ -1418,7 +1418,7 @@ impl GpuCache {
             e.users += 1;
             return Some((e.id, key));
         }
-        let t = std::time::Instant::now();
+        let t = web_time::Instant::now();
         let data = load_texture_key(&key, !self.fast_loads)?;
         self.sync_decodes += 1;
         self.sync_decode_secs += t.elapsed().as_secs_f64();
@@ -1877,7 +1877,7 @@ pub struct World {
     /// OMSI's `[texmemlimit]`: bytes the scenery and vehicle textures may take on the GPU
     /// (0 = no limit), and when the budget was last looked at.
     texture_limit: std::sync::atomic::AtomicU64,
-    budget_checked: Mutex<Option<std::time::Instant>>,
+    budget_checked: Mutex<Option<web_time::Instant>>,
     /// Traffic-path lanes collected while building tiles.
     pub lanes: Mutex<Vec<omsi_sim::traffic::Lane>>,
     /// The tiles whose lanes and parked cars have been put into `lanes` and `parked_cars`.
@@ -3143,7 +3143,7 @@ impl World {
 /// resolve_path`).
 pub fn navigation_map_of(root: &Path, tiles: &[(i32, i32, PathBuf)], chrono_dirs: &[PathBuf]) -> NavigationMap {
     use rayon::prelude::*;
-    let t0 = std::time::Instant::now();
+    let t0 = web_time::Instant::now();
     let scos: Mutex<HashMap<String, Option<Arc<SceneryObject>>>> = Mutex::new(HashMap::new());
     let sco_of = |file: &str| -> Option<Arc<SceneryObject>> {
         let key = file.trim().to_ascii_lowercase().replace('\\', "/");
@@ -3303,7 +3303,7 @@ impl World {
         scene: &mut Scene,
         tiles: &[(i32, i32, PathBuf)],
     ) -> Result<LoadStats> {
-        let t0 = std::time::Instant::now();
+        let t0 = web_time::Instant::now();
         // OMSI_BATCH=n: prepare the tiles a few at a time, as the window's streaming does
         let batch = omsi_cfg::env::var("OMSI_BATCH")
             .ok()
@@ -3316,7 +3316,7 @@ impl World {
         };
         let mut t_prepare = std::time::Duration::ZERO;
         for chunk in tiles.chunks(batch) {
-            let t = std::time::Instant::now();
+            let t = web_time::Instant::now();
             let (prepared, s) = self.prepare_tiles(chunk);
             t_prepare += t.elapsed();
             stats.add_prepared(&s);
@@ -3523,10 +3523,10 @@ impl World {
 
     fn prepare_tiles_impl(&self, tiles: &[(i32, i32, PathBuf)], initial_diag: bool) -> (Vec<Prepared>, LoadStats) {
         let profile = omsi_cfg::env::var_os("OMSI_PROFILE").is_some();
-        let t0 = std::time::Instant::now();
+        let t0 = web_time::Instant::now();
         let index = self.index();
         let layout = self.layout();
-        let t1 = std::time::Instant::now();
+        let t1 = web_time::Instant::now();
         let keys: Vec<(i32, i32)> = tiles.iter().map(|t| (t.0, t.1)).collect();
         if initial_diag {
             log::info!(
@@ -3571,7 +3571,7 @@ impl World {
             .par_iter()
             .filter_map(|k| {
                 let path = layout.paths.get(k)?;
-                let started = std::time::Instant::now();
+                let started = web_time::Instant::now();
                 if initial_diag {
                     log::info!(
                         "tile loading: staging tile {},{} ({})",
@@ -3623,7 +3623,7 @@ impl World {
                 .filter_map(|k| cache.get(k).map(|s| (*k, s.clone())))
                 .collect()
         };
-        let t2 = std::time::Instant::now();
+        let t2 = web_time::Instant::now();
         if initial_diag {
             log::info!(
                 "tile loading: first-area staging finished in {:.2} s ({} dependency tile(s) read now)",
@@ -3638,7 +3638,7 @@ impl World {
         let mut prepared: Vec<Prepared> = keys
             .par_iter()
             .filter_map(|k| {
-                let started = std::time::Instant::now();
+                let started = web_time::Instant::now();
                 if initial_diag {
                     log::info!("tile loading: placing tile {},{}", k.0, k.1);
                 }
@@ -3656,7 +3656,7 @@ impl World {
                 out
             })
             .collect();
-        let t3 = std::time::Instant::now();
+        let t3 = web_time::Instant::now();
         if initial_diag {
             log::info!(
                 "tile loading: first-area placement finished in {:.2} s; cutting terrain/textures",
@@ -6319,7 +6319,7 @@ impl World {
         renderer: &Renderer,
         scene: &mut Scene,
         u: &mut PendingUpload,
-        deadline: Option<std::time::Instant>,
+        deadline: Option<web_time::Instant>,
     ) -> bool {
         let mut gpu_guard = self.gpu.lock();
         let gpu = &mut *gpu_guard;
@@ -6327,7 +6327,7 @@ impl World {
         let ground_mat = gpu.ground.as_ref().unwrap().ground_mat;
         let slow = omsi_cfg::env::var_os("OMSI_DEBUG_UPLOAD").is_some();
         loop {
-            let t_item = std::time::Instant::now();
+            let t_item = web_time::Instant::now();
             if let Some(path) = u.textures.pop() {
                 if !gpu.textures.contains_key(&path) {
                     if let Some(img) = u.prepared.images.get(&path) {
@@ -6367,7 +6367,7 @@ impl World {
                 return true;
             }
             match deadline {
-                Some(d) if std::time::Instant::now() < d => {}
+                Some(d) if web_time::Instant::now() < d => {}
                 _ => return u.textures.is_empty() && u.types.is_empty(),
             }
         }
@@ -6418,9 +6418,9 @@ impl World {
         renderer: &Renderer,
         scene: &mut Scene,
         u: &mut PendingUpload,
-        deadline: Option<std::time::Instant>,
+        deadline: Option<web_time::Instant>,
     ) -> bool {
-        let t_lock = std::time::Instant::now();
+        let t_lock = web_time::Instant::now();
         let mut gpu_guard = self.gpu.lock();
         let lock_wait = t_lock.elapsed().as_secs_f64();
         let gpu = &mut *gpu_guard;
@@ -6458,11 +6458,11 @@ impl World {
         let ground_dirs = vec![self.root.clone()];
         let only_object = omsi_cfg::env::var("OMSI_ONLY_OBJECT").is_ok();
         let decodes_before = (gpu.sync_decodes, gpu.sync_decode_secs);
-        let t_start = std::time::Instant::now();
+        let t_start = web_time::Instant::now();
         let out_of_time = |done_some: bool| {
             done_some
                 && deadline
-                    .map(|d| std::time::Instant::now() >= d)
+                    .map(|d| web_time::Instant::now() >= d)
                     .unwrap_or(false)
         };
         macro_rules! instance {
@@ -6475,7 +6475,7 @@ impl World {
         }
         let mut done_some = false;
         while pl.phase < 4 && !out_of_time(done_some) {
-            let t_phase = std::time::Instant::now();
+            let t_phase = web_time::Instant::now();
             let phase = pl.phase;
             match phase {
                 0 => {
@@ -8200,7 +8200,7 @@ impl World {
         &self,
         renderer: &Renderer,
         scene: &mut Scene,
-        deadline: Option<std::time::Instant>,
+        deadline: Option<web_time::Instant>,
     ) -> usize {
         let (wanted, restores) = {
             let mut gpu = self.gpu.lock();
@@ -8219,7 +8219,7 @@ impl World {
                 let done = self.upgrades_done.clone();
                 let restore = restores.contains(&path);
                 // (off the frame's pool: see `threads`)
-                crate::threads::background_pool().spawn(move || {
+                crate::threads::spawn_background(move || {
                     if let Some(t) = load_texture_key(&path, true) {
                         // (a texture over the budget comes back whatever it is, and so
                         // does one put up at half its size meanwhile: see
@@ -8247,7 +8247,7 @@ impl World {
         let mut swapped: Vec<TextureId> = Vec::new();
         loop {
             if deadline
-                .map(|d| std::time::Instant::now() >= d)
+                .map(|d| web_time::Instant::now() >= d)
                 .unwrap_or(false)
                 && !swapped.is_empty()
             {
@@ -8278,7 +8278,7 @@ impl World {
         }
         let n = swapped.len();
         if n > 0 {
-            let t = std::time::Instant::now();
+            let t = web_time::Instant::now();
             let rebound = renderer.rebind_textures(scene, &swapped);
             if omsi_cfg::env::var_os("OMSI_PROFILE").is_some() {
                 log::info!("textures: {n} compressed ones swapped in, {rebound} materials rebound in {:.1} ms", t.elapsed().as_secs_f64() * 1000.0);
@@ -8331,9 +8331,9 @@ impl World {
             {
                 return 0;
             }
-            *last = Some(std::time::Instant::now());
+            *last = Some(web_time::Instant::now());
         }
-        let t0 = std::time::Instant::now();
+        let t0 = web_time::Instant::now();
         let vehicle_bytes: u64 = self
             .vehicle_textures
             .lock()
@@ -8520,7 +8520,7 @@ impl World {
         if keep.iter().zip(lens).all(|(k, l)| *k == l) {
             return [0; 4];
         }
-        let t = std::time::Instant::now();
+        let t = web_time::Instant::now();
         renderer.truncate(scene, keep[0], keep[1], keep[2], keep[3]);
         gpu.free_meshes.keep_below(keep[0]);
         gpu.free_textures.keep_below(keep[1]);
@@ -8547,7 +8547,7 @@ impl World {
             if self.upgrades_pending.lock().is_empty() && self.gpu.lock().wants_upgrade.is_empty() {
                 break;
             }
-            std::thread::sleep(std::time::Duration::from_millis(5));
+            omsi_cfg::sleep(std::time::Duration::from_millis(5));
         }
     }
 
@@ -10840,7 +10840,7 @@ pub struct VehicleSet {
     materials: Vec<MaterialId>,
     /// Vehicles drawn with it now, and since when nobody is.
     users: usize,
-    idle_since: Option<std::time::Instant>,
+    idle_since: Option<web_time::Instant>,
 }
 
 /// What reads vehicle sets ahead on a worker thread: their textures and meshes, made on the
@@ -11282,7 +11282,7 @@ impl World {
             if let Some(s) = self.vehicle_gpu.lock().get_mut(&key) {
                 s.users = s.users.saturating_sub(1);
                 if s.users == 0 {
-                    s.idle_since = Some(std::time::Instant::now());
+                    s.idle_since = Some(web_time::Instant::now());
                 }
             }
         }
@@ -11298,7 +11298,7 @@ impl World {
         keep: &hashbrown::HashSet<VehicleKey>,
         idle: std::time::Duration,
     ) -> usize {
-        let now = std::time::Instant::now();
+        let now = web_time::Instant::now();
         let mut sets = self.vehicle_gpu.lock();
         let gone: Vec<VehicleKey> = sets
             .iter()
@@ -11869,7 +11869,7 @@ impl World {
         let mut held: Vec<PathBuf> = Vec::new();
         let mut mesh_keys: Vec<(PathBuf, usize)> = Vec::new();
         let mut materials: Vec<MaterialId> = Vec::new();
-        let t_all = std::time::Instant::now();
+        let t_all = web_time::Instant::now();
         let mut mesh_secs = 0.0f64;
         let tex_time = std::cell::RefCell::new((0usize, 0.0f64));
         macro_rules! tex {
@@ -11884,7 +11884,7 @@ impl World {
                 }
             }};
             ($name:expr, $dirs:expr, $how:ident) => {{
-                let t = std::time::Instant::now();
+                let t = web_time::Instant::now();
                 let n = tex_ids.len();
                 let r = self.$how(renderer, scene, &mut tex_ids, &mut held, $name, $dirs);
                 if tex_ids.len() > n {
@@ -12318,7 +12318,7 @@ impl World {
                     base
                 })
                 .collect();
-            let t_mesh = std::time::Instant::now();
+            let t_mesh = web_time::Instant::now();
             let id = self.vehicle_mesh(
                 renderer,
                 scene,
@@ -12358,7 +12358,7 @@ impl World {
             mesh_keys,
             materials,
             users: 0,
-            idle_since: Some(std::time::Instant::now()),
+            idle_since: Some(web_time::Instant::now()),
         }
     }
 }

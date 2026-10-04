@@ -1420,7 +1420,7 @@ fn start(l: &mut Launcher) {
     // a second game on one computer is for testing LAN play, not something to do by
     // accident: with one running, the button asks for a second click
     if running > 0 && l.state.second_armed.map(|t| t.elapsed().as_secs() >= 6).unwrap_or(true) {
-        l.state.second_armed = Some(std::time::Instant::now());
+        l.state.second_armed = Some(web_time::Instant::now());
         l.state.set_status("A game is running already (its window may be behind this one - see Sessions). Click again to start another one anyway.", true);
         return;
     }

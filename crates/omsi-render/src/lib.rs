@@ -1503,13 +1503,13 @@ pub struct Renderer {
     /// The projection's width over height while a picture is drawn into a texture (see
     /// `render_to_texture`), whatever the texture's own shape.
     texture_aspect: Option<f32>,
-    last_frame: Option<std::time::Instant>,
+    last_frame: Option<web_time::Instant>,
     /// The next frame stands alone (an offscreen picture): the exposure is there at once.
     pub instant_exposure: bool,
     /// Overlay pipeline without multisampling, for drawing the HUD after the post pass.
     overlay_pipeline_1x: wgpu::RenderPipeline,
     xr_ui_pipeline: wgpu::RenderPipeline,
-    started: std::time::Instant,
+    started: web_time::Instant,
     /// `[matl_texadress_clamp]` (and border, mirror-once) and `[matl_texadress_mirror]`.
     clamp_sampler: wgpu::Sampler,
     mirror_sampler: wgpu::Sampler,
@@ -1551,7 +1551,7 @@ pub struct Renderer {
     /// Full-resolution current scene before rain films, in its original colour format.
     glass_picture: Option<wgpu::TextureView>,
     /// When each size of the size-keyed targets (scale, MSAA, HDR) was last asked for.
-    target_use: HashMap<(u32, u32), std::time::Instant>,
+    target_use: HashMap<(u32, u32), web_time::Instant>,
     /// The game's frame-rate governor on top of the render scale (1 = none; see
     /// `set_dynamic_scale`).
     dynamic_scale: std::cell::Cell<f32>,
@@ -1592,7 +1592,7 @@ pub struct Renderer {
     /// passed the culling and draws per pass.
     pub counts: std::cell::RefCell<std::collections::BTreeMap<&'static str, f64>>,
     profiling: bool,
-    draw_audit_at: std::time::Instant,
+    draw_audit_at: web_time::Instant,
     /// Reuse a small set of encoding workers instead of creating OS threads for each
     /// main/mirror picture. Keep these separate from simulation's worker queue.
     encoding_pool: Option<rayon::ThreadPool>,
@@ -2799,7 +2799,7 @@ impl Renderer {
         log::info!("renderer: compiling the coronas shaders");
         let corona_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("corona"),
-            source: wgpu::ShaderSource::Wgsl(corona_shader_source().into()),
+            source: wgpu::ShaderSource::Wgsl(tint(corona_shader_source()).into()),
         });
         let corona_pl = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("corona"),
@@ -2964,7 +2964,7 @@ impl Renderer {
         log::info!("renderer: compiling the sky and clouds shaders");
         let sky_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("sky"),
-            source: wgpu::ShaderSource::Wgsl(sky_shader_source().into()),
+            source: wgpu::ShaderSource::Wgsl(tint(sky_shader_source()).into()),
         });
         let sky_pl = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("sky"),
@@ -3099,7 +3099,7 @@ impl Renderer {
         log::info!("renderer: compiling the overlays shaders");
         let overlay_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("overlay"),
-            source: wgpu::ShaderSource::Wgsl(include_str!("overlay.wgsl").into()),
+            source: wgpu::ShaderSource::Wgsl(tint(include_str!("overlay.wgsl")).into()),
         });
         let overlay_pl = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("overlay"),
@@ -3158,7 +3158,7 @@ impl Renderer {
         log::info!("renderer: compiling the SSAO shaders");
         let ssao_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("ssao"),
-            source: wgpu::ShaderSource::Wgsl(include_str!("ssao.wgsl").into()),
+            source: wgpu::ShaderSource::Wgsl(tint(include_str!("ssao.wgsl")).into()),
         });
         let ao_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("ssao"),
@@ -3308,7 +3308,7 @@ impl Renderer {
         log::info!("renderer: compiling the mip maps shaders");
         let mip_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("mip"),
-            source: wgpu::ShaderSource::Wgsl(include_str!("mip.wgsl").into()),
+            source: wgpu::ShaderSource::Wgsl(tint(include_str!("mip.wgsl")).into()),
         });
         let mip_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("mip"),
@@ -3376,7 +3376,7 @@ impl Renderer {
         log::info!("renderer: compiling the post passes shaders");
         let post_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("post"),
-            source: wgpu::ShaderSource::Wgsl(include_str!("post.wgsl").into()),
+            source: wgpu::ShaderSource::Wgsl(tint(include_str!("post.wgsl")).into()),
         });
         let float_tex = |binding: u32| wgpu::BindGroupLayoutEntry {
             binding,
@@ -3886,7 +3886,7 @@ impl Renderer {
         log::info!("renderer: compiling the VR interface shaders");
         let xr_ui_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("OpenXR spatial UI"),
-            source: wgpu::ShaderSource::Wgsl(include_str!("xr_ui.wgsl").into()),
+            source: wgpu::ShaderSource::Wgsl(tint(include_str!("xr_ui.wgsl")).into()),
         });
         let xr_ui_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: Some("OpenXR spatial UI"),
@@ -3922,7 +3922,7 @@ impl Renderer {
         log::info!("renderer: compiling the upscaler shaders");
         let upscale_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("upscale"),
-            source: wgpu::ShaderSource::Wgsl(include_str!("upscale.wgsl").into()),
+            source: wgpu::ShaderSource::Wgsl(tint(include_str!("upscale.wgsl")).into()),
         });
         let upscale_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("upscale"),
@@ -4059,7 +4059,7 @@ impl Renderer {
             instant_exposure: false,
             overlay_pipeline_1x,
             xr_ui_pipeline,
-            started: std::time::Instant::now(),
+            started: web_time::Instant::now(),
             ao: None,
             ao_sampler,
             ao_layout,
@@ -4113,8 +4113,8 @@ impl Renderer {
             stats: Default::default(),
             counts: Default::default(),
             profiling: omsi_cfg::env::var_os("OMSI_PROFILE").is_some(),
-            draw_audit_at: std::time::Instant::now(),
-            encoding_pool: if omsi_cfg::env::var_os("OMSI_NO_RENDER_POOL").is_some() {
+            draw_audit_at: web_time::Instant::now(),
+            encoding_pool: if cfg!(target_arch = "wasm32") || omsi_cfg::env::var_os("OMSI_NO_RENDER_POOL").is_some() {
                 None
             } else {
                 let workers = std::thread::available_parallelism().map(|n| n.get() / 2).unwrap_or(2).clamp(2, 8);
@@ -4178,7 +4178,7 @@ impl Renderer {
 
     /// The smaller colour target of the render scale for this size, with its bind group.
     fn scale_target(&mut self, w: u32, h: u32) -> (wgpu::TextureView, wgpu::BindGroup) {
-        self.target_use.insert((w, h), std::time::Instant::now());
+        self.target_use.insert((w, h), web_time::Instant::now());
         if let Some(t) = self.scale_targets.get(&(w, h)) {
             return t.clone();
         }
@@ -4629,7 +4629,7 @@ impl Renderer {
         });
         let data = vec![0u8; (n * n * 4) as usize];
         let rounds = 4;
-        let t = std::time::Instant::now();
+        let t = web_time::Instant::now();
         for _ in 0..rounds {
             self.queue.write_texture(
                 wgpu::TexelCopyTextureInfo { texture: &texture, mip_level: 0, origin: wgpu::Origin3d::ZERO, aspect: wgpu::TextureAspect::All },
@@ -6134,8 +6134,8 @@ impl Renderer {
     fn evict_targets(&mut self) {
         const STALE: std::time::Duration = std::time::Duration::from_millis(250);
         const KEEP: usize = 10;
-        let now = std::time::Instant::now();
-        let mut uses: Vec<((u32, u32), std::time::Instant)> = self.target_use.iter().map(|(k, t)| (*k, *t)).collect();
+        let now = web_time::Instant::now();
+        let mut uses: Vec<((u32, u32), web_time::Instant)> = self.target_use.iter().map(|(k, t)| (*k, *t)).collect();
         uses.sort_by_key(|(_, t)| std::cmp::Reverse(*t));
         let keep: std::collections::HashSet<(u32, u32)> = uses.iter().filter(|(_, t)| now.duration_since(*t) < STALE).take(KEEP).map(|(k, _)| *k).collect();
         self.target_use.retain(|k, _| keep.contains(k));
@@ -6146,7 +6146,7 @@ impl Renderer {
 
     /// The multisampled colour and depth attachments for a target of this size.
     fn msaa_targets(&mut self, w: u32, h: u32) -> (wgpu::TextureView, wgpu::TextureView) {
-        self.target_use.insert((w, h), std::time::Instant::now());
+        self.target_use.insert((w, h), web_time::Instant::now());
         if let Some(t) = self.msaa_targets.get(&(w, h)) {
             return t.clone();
         }
@@ -6187,7 +6187,7 @@ impl Renderer {
     /// The HDR colour targets of the enhanced path for this size, with the glow's levels,
     /// the tone-mapped picture FXAA reads and the post passes' bind groups.
     fn hdr_targets(&mut self, w: u32, h: u32) -> bool {
-        self.target_use.insert((w, h), std::time::Instant::now());
+        self.target_use.insert((w, h), web_time::Instant::now());
         if self.hdr_targets.contains_key(&(w, h)) {
             return false;
         }
@@ -6387,7 +6387,7 @@ impl Renderer {
             .map(|i| sky_input_differs(&i, &input))
             .unwrap_or(true)
         {
-            if self.instant_exposure || self.sky_state.is_none() {
+            if cfg!(target_arch = "wasm32") || self.instant_exposure || self.sky_state.is_none() {
                 self.sky_job = None;
                 self.install_sky(atmosphere::SkyState::compute(&input));
             } else {
@@ -7714,10 +7714,10 @@ impl Renderer {
             .map(|t| t.set.clone());
         let mut timed: Vec<&'static str> = Vec::new();
         // OMSI_PROFILE: time per stage, the mirrors apart from the window's picture
-        let mut stage_t = std::time::Instant::now();
+        let mut stage_t = web_time::Instant::now();
         let mut stage = |r: &Renderer, window: &'static str, mirror: &'static str| {
             if r.profiling {
-                let now = std::time::Instant::now();
+                let now = web_time::Instant::now();
                 *r.stats
                     .borrow_mut()
                     .entry(if with_overlays { window } else { mirror })
@@ -7810,7 +7810,7 @@ impl Renderer {
             self.prepare_glass_behind(scene, width, height, if masked_frame { HDR_FORMAT } else { self.format });
         }
         let dt = {
-            let now = std::time::Instant::now();
+            let now = web_time::Instant::now();
             let dt = self
                 .last_frame
                 .map(|t| (now - t).as_secs_f32())
@@ -8807,7 +8807,7 @@ impl Renderer {
             *c.entry("ktris shadow close").or_default() += tris(&shadow_batches[2]);
         }
         if self.profiling && with_overlays && self.draw_audit_at.elapsed().as_secs() >= 10 {
-            self.draw_audit_at = std::time::Instant::now();
+            self.draw_audit_at = web_time::Instant::now();
             // (batches, draws, triangles) per asset: what the CPU encodes and what the GPU
             // goes through
             let mut assets: HashMap<&str, (usize, usize, u64)> = HashMap::new();
@@ -9632,11 +9632,12 @@ impl Renderer {
         // Turning the recorded passes into Metal commands is the costliest CPU step of a
         // frame (wgpu checks every draw): the shadow maps and the prepass are finished on
         // helper threads while this one finishes the picture.
-        let big =
-            shadow_batches.iter().map(|b| b.len()).sum::<usize>() + prepass_batches.len() > 64 || !main_parts.is_empty();
+        // (the browser build has one thread: everything is finished in order there)
+        let big = !cfg!(target_arch = "wasm32")
+            && (shadow_batches.iter().map(|b| b.len()).sum::<usize>() + prepass_batches.len() > 64 || !main_parts.is_empty());
         let profiling = self.profiling;
         let finish = |encoder: wgpu::CommandEncoder| {
-            let start = profiling.then(std::time::Instant::now);
+            let start = profiling.then(web_time::Instant::now);
             let commands = encoder.finish();
             (commands, start.map(|t| t.elapsed().as_secs_f64()).unwrap_or(0.0))
         };
@@ -9654,10 +9655,10 @@ impl Renderer {
                     scope.spawn_fifo(move |_| { let _ = tx.send((k, finish(e).0)); });
                 }
                 let (commands, main_secs) = finish(encoder);
-                let wait = std::time::Instant::now();
+                let wait = web_time::Instant::now();
                 let (shadow_commands, shadow_secs) = shadow_rx.recv().expect("command encoding worker");
                 let shadow_wait = wait.elapsed().as_secs_f64();
-                let wait = std::time::Instant::now();
+                let wait = web_time::Instant::now();
                 let (prepass_commands, prepass_secs) = prepass_rx.recv().expect("command encoding worker");
                 let mut part_commands: Vec<Option<wgpu::CommandBuffer>> = (0..parts).map(|_| None).collect();
                 for _ in 0..parts {
@@ -9679,10 +9680,10 @@ impl Renderer {
                 let prepass = scope.spawn(move || finish(prepass_encoder));
                 let parts: Vec<_> = main_parts.into_iter().map(|e| scope.spawn(move || finish(e).0)).collect();
                 let (commands, main_secs) = finish(encoder);
-                let wait = std::time::Instant::now();
+                let wait = web_time::Instant::now();
                 let (shadow_commands, shadow_secs) = shadow.join().expect("command encoding thread");
                 let shadow_wait = wait.elapsed().as_secs_f64();
-                let wait = std::time::Instant::now();
+                let wait = web_time::Instant::now();
                 let (prepass_commands, prepass_secs) = prepass.join().expect("command encoding thread");
                 (
                     shadow_commands,
@@ -10293,6 +10294,18 @@ fn indexing_as_calls(src: &str, name: &str, call: &str) -> String {
     out
 }
 
+/// A shader's text as the browser's WGSL checker (Tint) takes it: it wants derivatives
+/// (fwidth, textureSample) in uniform control flow, and the shaders take them after a branch
+/// on a per-pixel value, as every other implementation allows.
+pub(crate) fn tint(src: impl Into<String>) -> String {
+    #[cfg(target_arch = "wasm32")]
+    {
+        format!("diagnostic(off, derivative_uniformity);\n{}", src.into())
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    src.into()
+}
+
 fn scene_shader_text(gl: bool) -> String {
     let src = [
         include_str!("colour.wgsl"),
@@ -10302,6 +10315,11 @@ fn scene_shader_text(gl: bool) -> String {
         include_str!("enhanced.wgsl"),
     ]
     .join("\n");
+    // Chrome's WGSL checker (Tint) wants derivatives (fwidth, textureSample) in uniform control
+    // flow; the shaders take them after a branch on a per-pixel value, as every other
+    // implementation allows
+    #[cfg(target_arch = "wasm32")]
+    let src = format!("diagnostic(off, derivative_uniformity);\n{src}");
     if !gl {
         return src;
     }
@@ -10321,7 +10339,10 @@ fn scene_shader_text(gl: bool) -> String {
 /// The enhanced clouds' noise textures (clouds.rs), made once: the shape map (2-D RGBA8)
 /// and the detail volume (3-D R8), both with their mip chains, and a repeating sampler.
 fn cloud_noise_textures(device: &wgpu::Device, queue: &wgpu::Queue) -> (wgpu::TextureView, wgpu::TextureView, wgpu::Sampler) {
-    let t0 = std::time::Instant::now();
+    let t0 = web_time::Instant::now();
+    #[cfg(target_arch = "wasm32")]
+    let (shape, detail) = (clouds::shape_map(), clouds::detail_volume());
+    #[cfg(not(target_arch = "wasm32"))]
     let (shape, detail) = std::thread::scope(|s| {
         let a = s.spawn(clouds::shape_map);
         let b = s.spawn(clouds::detail_volume);
@@ -10424,7 +10445,7 @@ struct ExposureLog {
     ready: Arc<std::sync::atomic::AtomicBool>,
     waiting: bool,
     frame: u64,
-    started: std::time::Instant,
+    started: web_time::Instant,
     /// the pre-exposure (log2) and the metering settings of the frame being read back
     pending: (f32, [f32; 6]),
     /// The tone mapping's metering correction last read back (EV). Self-lit surfaces (a
@@ -10450,7 +10471,7 @@ impl ExposureLog {
             ready: Arc::new(std::sync::atomic::AtomicBool::new(false)),
             waiting: false,
             frame: 0,
-            started: std::time::Instant::now(),
+            started: web_time::Instant::now(),
             pending: (0.0, [0.0; 6]),
             ev: 0.0,
             log: omsi_cfg::env::var_os("OMSI_DEBUG_EXPOSURE").is_some(),
@@ -10890,7 +10911,7 @@ impl DevicePoller {
                 let pause = std::time::Duration::from_millis(1);
                 while !flag.load(std::sync::atomic::Ordering::Relaxed) {
                     let _ = device.poll(wgpu::PollType::Poll);
-                    std::thread::sleep(pause);
+                    omsi_cfg::sleep(pause);
                 }
             })
             .ok()?;
@@ -10915,6 +10936,9 @@ fn in_scope<'s, R>(pool: Option<&rayon::ThreadPool>, op: impl FnOnce(&rayon::Sco
 }
 
 fn run_parts<T: Send>(pool: Option<&rayon::ThreadPool>, parts: usize, f: impl Fn(usize) -> T + Sync) -> Vec<T> {
+    if cfg!(target_arch = "wasm32") {
+        return (0..parts.max(1)).map(|k| f(k)).collect();
+    }
     let Some(pool) = pool else {
         return std::thread::scope(|s| {
             let f = &f;

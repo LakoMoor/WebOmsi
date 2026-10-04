@@ -15,7 +15,7 @@ use mlua::{Function, HookTriggers, Lua, LuaOptions, MultiValue, StdLib, Table, V
 use std::cell::Cell;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
-use std::time::{Duration, Instant, SystemTime};
+use web_time::{Duration, Instant, SystemTime};
 
 const PRELUDE: &str = include_str!("prelude.lua");
 

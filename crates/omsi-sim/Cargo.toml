@@ -6,6 +6,7 @@ license.workspace = true
 description = "Simulation runtime: vehicle instances with scripts and animations, system variables, clock"
 
 [dependencies]
+web-time = "1"
 omsi-cfg = { path = "../omsi-cfg" }
 omsi-script = { path = "../omsi-script" }
 omsi-model = { path = "../omsi-model" }

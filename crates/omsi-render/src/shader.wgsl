@@ -1036,7 +1036,7 @@ fn rain_hash(p: vec2<f32>) -> vec2<f32> {
     // Integer mixing keeps neighbouring cells independent without the precision loss and
     // repeated sine evaluations of a floating-point hash.
     let cell = bitcast<vec2<u32>>(vec2<i32>(floor(p)));
-    var a = cell.x * 0x9e3779b9u ^ cell.y * 0x85ebca6bu;
+    var a = (cell.x * 0x9e3779b9u) ^ (cell.y * 0x85ebca6bu);
     a = (a ^ (a >> 16u)) * 0x7feb352du;
     a = (a ^ (a >> 15u)) * 0x846ca68bu;
     a = a ^ (a >> 16u);

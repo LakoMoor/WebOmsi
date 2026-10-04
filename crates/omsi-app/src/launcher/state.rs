@@ -7,7 +7,7 @@
 use omsi_launcher_lib as core;
 use serde::{Deserialize, Serialize};
 use std::sync::mpsc::{channel, Receiver, Sender};
-use std::time::Instant;
+use web_time::Instant;
 
 /// Results of background work.
 pub enum Msg {
@@ -185,7 +185,7 @@ pub struct State {
     pub choice: Choice,
     pub choice_dirty: f32,
     /// Map, whether it has a `laststn.osn`, when that was looked up.
-    pub last_sit: Option<(String, Vec<core::SavedSituation>, std::time::Instant)>,
+    pub last_sit: Option<(String, Vec<core::SavedSituation>, web_time::Instant)>,
     /// Which of them "Continue" starts (0: the newest, the last situation when there is one).
     pub save_pick: usize,
     pub profiles: Vec<String>,
@@ -202,7 +202,7 @@ pub struct State {
     pub queued_launch: Option<core::Duty>,
     /// Start was pressed: the graphics device stays given up until the list of games has the
     /// game started (its process, once it is known), 15 s at most.
-    pub launch_hold: Option<std::time::Instant>,
+    pub launch_hold: Option<web_time::Instant>,
     launched_pid: Option<u32>,
     /// A game started from here ended on an error: what it said, and the end of its log
     /// (see `crash_of`), for the dialog that asks to report it.
@@ -329,7 +329,7 @@ impl State {
     }
 
     pub fn spawn_launch(&mut self, d: core::Duty) {
-        self.launch_hold = Some(std::time::Instant::now());
+        self.launch_hold = Some(web_time::Instant::now());
         self.launched_pid = None;
         self.spawn(move || Msg::Launched(core::launch(&d).map_err(|e| format!("{e:#}"))));
     }
@@ -614,7 +614,7 @@ impl State {
             }
             let list = core::saved_situations(&self.choice.map);
             self.save_pick = self.save_pick.min(list.len().saturating_sub(1));
-            self.last_sit = Some((self.choice.map.clone(), list, std::time::Instant::now()));
+            self.last_sit = Some((self.choice.map.clone(), list, web_time::Instant::now()));
         }
         self.last_sit.as_ref().map(|x| x.1.as_slice()).unwrap_or(&[])
     }

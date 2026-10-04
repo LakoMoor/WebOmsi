@@ -114,7 +114,7 @@ fn errors_and_runaway_loops_are_contained() {
     let mut plugins = Plugins::load(&[d.clone()], &HostConfig::default());
     assert_eq!(plugins.lua.len(), 2, "the file that does not compile is left out");
     let mut bus = Bus { vehicle: true, ..Default::default() };
-    let t = std::time::Instant::now();
+    let t = web_time::Instant::now();
     plugins.frame(&mut bus);
     assert!(t.elapsed().as_secs_f32() < 3.0);
     for _ in 0..12 {

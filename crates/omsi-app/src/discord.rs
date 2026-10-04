@@ -5,7 +5,7 @@ use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc, Mutex,
 };
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use web_time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 // Shared test application; replace centrally if a different application is used for release.
 pub(crate) const DEFAULT_APP_ID: &str = "1555504817110122526";
@@ -104,6 +104,27 @@ pub(crate) struct Discord {
 type Pipe = std::os::unix::net::UnixStream;
 #[cfg(windows)]
 struct Pipe(windows::Win32::Foundation::HANDLE);
+/// A page has no Discord to talk to: a pipe that is never opened.
+#[cfg(not(any(unix, windows)))]
+struct Pipe;
+
+#[cfg(not(any(unix, windows)))]
+impl Read for Pipe {
+    fn read(&mut self, _buf: &mut [u8]) -> io::Result<usize> {
+        Err(io::Error::from(io::ErrorKind::Unsupported))
+    }
+}
+
+#[cfg(not(any(unix, windows)))]
+impl Write for Pipe {
+    fn write(&mut self, _buf: &[u8]) -> io::Result<usize> {
+        Err(io::Error::from(io::ErrorKind::Unsupported))
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
+}
 
 #[cfg(windows)]
 impl Drop for Pipe {
@@ -458,7 +479,7 @@ fn run_with<T: Read + Write>(
             if let Some(pipe) = pipe.as_mut() {
                 if ready {
                     sequence += 1;
-                    let msg = serde_json::json!({ "cmd": "SET_ACTIVITY", "args": { "pid": std::process::id(), "activity": null }, "nonce": sequence.to_string() }).to_string();
+                    let msg = serde_json::json!({ "cmd": "SET_ACTIVITY", "args": { "pid": omsi_cfg::pid(), "activity": null }, "nonce": sequence.to_string() }).to_string();
                     let _ = write_frame(pipe, 1, msg.as_bytes());
                 }
                 let _ = write_frame(pipe, 2, &[]);
@@ -482,7 +503,7 @@ fn run_with<T: Read + Write>(
                     }
                 }
             }
-            std::thread::sleep(POLL);
+            omsi_cfg::sleep(POLL);
             continue;
         }
 
@@ -503,7 +524,7 @@ fn run_with<T: Read + Write>(
         {
             sequence += 1;
             let activity = current.as_ref().map(|p| activity(p, started, true));
-            let msg = serde_json::json!({ "cmd": "SET_ACTIVITY", "args": { "pid": std::process::id(), "activity": activity }, "nonce": sequence.to_string() }).to_string();
+            let msg = serde_json::json!({ "cmd": "SET_ACTIVITY", "args": { "pid": omsi_cfg::pid(), "activity": activity }, "nonce": sequence.to_string() }).to_string();
             if write_frame(pipe.as_mut().unwrap(), 1, msg.as_bytes()).is_err() {
                 pipe = None;
                 continue;
@@ -544,7 +565,7 @@ fn run_with<T: Read + Write>(
                         if nonce(&value) == Some(expected.as_str()) {
                             sequence += 1;
                             let activity = activity(&submitted, started, false);
-                            let msg = serde_json::json!({ "cmd": "SET_ACTIVITY", "args": { "pid": std::process::id(), "activity": activity }, "nonce": sequence.to_string() }).to_string();
+                            let msg = serde_json::json!({ "cmd": "SET_ACTIVITY", "args": { "pid": omsi_cfg::pid(), "activity": activity }, "nonce": sequence.to_string() }).to_string();
                             if write_frame(pipe.as_mut().unwrap(), 1, msg.as_bytes()).is_ok() {
                                 waiting_for = Some((
                                     sequence.to_string(),
@@ -579,7 +600,7 @@ fn run_with<T: Read + Write>(
                 shown = None;
             }
         }
-        std::thread::sleep(POLL);
+        omsi_cfg::sleep(POLL);
     }
 }
 
@@ -626,7 +647,7 @@ mod tests {
         packet.extend_from_slice(&(body.len() as u32).to_le_bytes());
         packet.extend_from_slice(body);
         pipe.write_all(&packet[..3]).unwrap();
-        std::thread::sleep(Duration::from_millis(15));
+        omsi_cfg::sleep(Duration::from_millis(15));
         pipe.write_all(&packet[3..]).unwrap();
     }
 
@@ -839,7 +860,7 @@ mod tests {
         ready_fragmented(&mut peer);
         let _unanswered = receive(&mut peer, deadline);
         while attempts.load(Ordering::Relaxed) < 2 && Instant::now() < deadline {
-            std::thread::sleep(POLL);
+            omsi_cfg::sleep(POLL);
         }
         assert!(attempts.load(Ordering::Relaxed) >= 2);
         stop.store(true, Ordering::Release);

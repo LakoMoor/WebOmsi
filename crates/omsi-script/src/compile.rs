@@ -864,7 +864,7 @@ mod tests {
     use super::*;
 
     fn program_of(script: &str) -> Program {
-        let dir = std::env::temp_dir().join(format!("omsi_gearbox_{}_{}", std::process::id(), script.len()));
+        let dir = std::env::temp_dir().join(format!("omsi_gearbox_{}_{}", omsi_cfg::pid(), script.len()));
         std::fs::create_dir_all(&dir).unwrap();
         let osc = dir.join("g.osc");
         std::fs::write(&osc, script).unwrap();
@@ -931,7 +931,7 @@ mod tests {
 
     #[test]
     fn script_vars_track_varlists_distinct_from_builtins() {
-        let dir = std::env::temp_dir().join(format!("omsi-script-test-vars-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("omsi-script-test-vars-{}", omsi_cfg::pid()));
         std::fs::create_dir_all(&dir).unwrap();
         let vl = dir.join("varlist.txt");
         std::fs::write(&vl, "door_0\nPAX_Entry0_Open\n").unwrap();

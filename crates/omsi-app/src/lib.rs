@@ -9,6 +9,13 @@
 //! calls `android_main` (see `android.rs`), which runs the launcher and the game in one
 //! window of one process.
 
+// the browser build has no sockets: `ureq`'s calls are answered with "no connection"
+#[cfg(target_arch = "wasm32")]
+extern crate ureq_web as ureq;
+
+#[cfg(target_arch = "wasm32")]
+pub mod web;
+
 mod admin;
 mod discord;
 #[cfg(steam)]
@@ -120,7 +127,7 @@ use omsi_render::{Camera, Renderer, Scene, SurfaceState};
 use scene::World;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use std::time::Instant;
+use web_time::Instant;
 use winit::application::ApplicationHandler;
 use winit::event::{DeviceEvent, ElementState, WindowEvent};
 use winit::event_loop::{ActiveEventLoop, EventLoop};
@@ -235,11 +242,11 @@ pub(crate) fn prepare(mut args: Args, bare: bool) -> Result<Option<(Args, Option
         .ok()
         .and_then(|s| s.trim().parse::<u64>().ok())
         .unwrap_or_else(|| {
-            let t = std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
+            let t = web_time::SystemTime::now()
+                .duration_since(web_time::UNIX_EPOCH)
                 .map(|d| d.as_nanos() as u64)
                 .unwrap_or(1);
-            (t ^ ((std::process::id() as u64) << 32)) % 1_000_000_000
+            (t ^ ((omsi_cfg::pid() as u64) << 32)) % 1_000_000_000
         });
     omsi_script::set_session_seed(seed);
     log::info!("script random seed {seed} (OMSI_SEED={seed} repeats it)");
@@ -385,7 +392,7 @@ pub(crate) fn make_app(mut args: Args, server_cfg: Option<server::ServerCfg>) ->
                         println!("\n  Server address for the players: {u}\n  (Multiplayer -> Servers -> Add)\n");
                         return;
                     }
-                    std::thread::sleep(std::time::Duration::from_millis(200));
+                    omsi_cfg::sleep(std::time::Duration::from_millis(200));
                 }
                 println!("  No tunnel address (is cloudflared installed?): players join at this machine's address and the UDP port");
             });

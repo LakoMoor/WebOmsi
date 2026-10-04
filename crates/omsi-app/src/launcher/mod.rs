@@ -29,7 +29,7 @@ use omsi_render::{Renderer, SurfaceState};
 use omsi_ui::paint::Align;
 use omsi_ui::{Draw, Rect, Weight};
 use std::sync::Arc;
-use std::time::Instant;
+use web_time::Instant;
 use theme::*;
 use ui::{Key, Ui};
 use winit::application::ApplicationHandler;
@@ -65,15 +65,15 @@ const PAGES: [(Page, &str, &str); 10] = [
     (Page::Setup, "Setup", "folder_open"),
 ];
 
-#[cfg(not(target_os = "android"))]
+#[cfg(not(any(target_os = "android", target_arch = "wasm32")))]
 type Clipboard = arboard::Clipboard;
 
 /// A phone: text copied in the launcher can be pasted in it (the system's clipboard is
 /// Java's).
-#[cfg(target_os = "android")]
+#[cfg(any(target_os = "android", target_arch = "wasm32"))]
 struct Clipboard(String);
 
-#[cfg(target_os = "android")]
+#[cfg(any(target_os = "android", target_arch = "wasm32"))]
 impl Clipboard {
     fn new() -> Result<Clipboard, ()> {
         Ok(Clipboard(String::new()))

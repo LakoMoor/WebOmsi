@@ -31,7 +31,7 @@ struct RuntimeSound {
     held: bool,
     /// Since when the conditions hold - what a `[volcurve] -1` reads, see
     /// [`SoundSet::curve_input`].
-    active_since: Option<std::time::Instant>,
+    active_since: Option<web_time::Instant>,
     /// The buffer's volume (linear) as DirectSound last took it: a `SetVolume` over 0 dB
     /// or under -100 dB is refused and the buffer keeps this one. A new buffer is at 0 dB.
     last_gain: f32,
@@ -405,7 +405,7 @@ impl SoundSet {
                 if !holds {
                     s.active_since = None;
                 } else if s.active_since.is_none() {
-                    s.active_since = Some(std::time::Instant::now());
+                    s.active_since = Some(web_time::Instant::now());
                 }
             }
             let Some(clip) = s.clip.clone() else { continue };
@@ -549,7 +549,7 @@ impl SoundSet {
             .iter_mut()
             .map(|s| {
                 if !s.def.triggers.is_empty() || Self::conditions_hold(&s.def, var) {
-                    s.active_since.get_or_insert_with(|| std::time::Instant::now() - std::time::Duration::from_secs(5));
+                    s.active_since.get_or_insert_with(|| web_time::Instant::now() - std::time::Duration::from_secs(5));
                 }
                 let e = ctx.eval(s, var, object_to_world);
                 let dist = s

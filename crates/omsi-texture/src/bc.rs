@@ -940,7 +940,7 @@ mod tests {
             let x = (i as u32 % w) as u8;
             p.copy_from_slice(&[x, (s >> 24) as u8 / 4 + x / 2, 90, 255]);
         }
-        let t = std::time::Instant::now();
+        let t = web_time::Instant::now();
         let (blk, _, _) = encode(&rgba, w, h, Bc::Bc1 { punch: false });
         let secs = t.elapsed().as_secs_f64();
         let back = decode(&blk, w, h, Bc::Bc1 { punch: false });

@@ -456,7 +456,7 @@ impl Clone for Sim {
 thread_local! {
     /// When the trials of this thread give up (see `TRIAL_BUDGET`): past it the copies of
     /// the bus stand still, so every trial fails at once and the search ends.
-    static DEADLINE: std::cell::Cell<Option<std::time::Instant>> = const { std::cell::Cell::new(None) };
+    static DEADLINE: std::cell::Cell<Option<web_time::Instant>> = const { std::cell::Cell::new(None) };
 }
 
 /// How long the search for a way to type may take. The stock units need a tenth of a
@@ -470,7 +470,7 @@ fn trial_budget() -> std::time::Duration {
 }
 
 fn out_of_time() -> bool {
-    DEADLINE.with(|d| d.get().is_some_and(|t| std::time::Instant::now() >= t))
+    DEADLINE.with(|d| d.get().is_some_and(|t| web_time::Instant::now() >= t))
 }
 
 impl Sim {
@@ -609,7 +609,7 @@ impl Typist {
         let base = Sim { program: p.clone(), state: v.state.clone(), host: v.host.scratch(), vm: Vm::new(), t: 0.0, presses: Vec::new(), mode: unit.mode };
         let mut typist = Typist { target: target.clone(), unit: unit.clone(), plan: None, t: 0.0, slip: 0.0, waited: 0.0, next: 0, releases: Vec::new(), outcome: None, planning: None };
         let search = move || {
-            let t0 = std::time::Instant::now();
+            let t0 = web_time::Instant::now();
             DEADLINE.with(|d| d.set(Some(t0 + trial_budget())));
             let found = find_plan(&unit, &target, base);
             DEADLINE.with(|d| d.set(None));

@@ -141,8 +141,8 @@ fn player_identity(
     } else if let Some(p) = saved_ident {
         Some(p.to_string())
     } else if vt.def.registration_free {
-        let seed = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
+        let seed = web_time::SystemTime::now()
+            .duration_since(web_time::UNIX_EPOCH)
             .map(|d| d.as_nanos() as u64)
             .unwrap_or(0);
         world.free_registration(seed)

@@ -24,6 +24,9 @@ pub(crate) fn log_system(settings: &crate::settings::Settings) {
     if let Ok(d) = std::env::current_dir() {
         log::info!("working folder: {}", d.display());
     }
+    #[cfg(target_arch = "wasm32")]
+    let env: Vec<String> = Vec::new();
+    #[cfg(not(target_arch = "wasm32"))]
     let env: Vec<String> = std::env::vars().filter(|(k, _)| k.starts_with("OMSI_") || k == "RUST_LOG" || k == "WGPU_BACKEND").map(|(k, v)| format!("{k}={v}")).collect();
     if !env.is_empty() {
         log::info!("environment: {}", env.join(" "));

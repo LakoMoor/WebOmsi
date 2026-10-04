@@ -603,7 +603,7 @@ mod tests {
 
     #[test]
     fn rear_sections_are_not_listed_and_lead_to_their_front() {
-        let dir = std::env::temp_dir().join(format!("omsi_vehicle_couple_{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("omsi_vehicle_couple_{}", omsi_cfg::pid()));
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(dir.join("G Main.bus"), "[friendlyname]\nMB\nO530G\nDefault\n\n[coupling_back]\n0\n-4\n0.3\n\n[couple_back]\ng trail.BUS\nfalse\n").unwrap();
         std::fs::write(dir.join("G Trail.bus"), "[scriptshare]\n\n[coupling_front]\n0\n4\n0.3\n").unwrap();
@@ -652,7 +652,7 @@ mod tests {
     /// list file whatever the mode), prefix + number only where the list has none.
     #[test]
     fn list_plate_wins_over_a_later_automatic_mode() {
-        let dir = std::env::temp_dir().join(format!("omsi_vehicle_regs_{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("omsi_vehicle_regs_{}", omsi_cfg::pid()));
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(dir.join("Nos.org"), "E1\nE2\n").unwrap();
         std::fs::write(dir.join("Regs.org"), "AB12 CDE\n").unwrap();

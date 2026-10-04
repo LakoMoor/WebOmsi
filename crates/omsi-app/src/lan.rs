@@ -29,7 +29,7 @@ use omsi_sim::traffic::{Lane, LaneKind, Network};
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use web_time::{Duration, Instant};
 use winit::keyboard::KeyCode;
 
 /// How long a joining player's game waits for the host's welcome (its world) before the
@@ -574,7 +574,7 @@ pub struct LanGame {
     /// Vehicles another player drives that could not be made here, and when that was
     /// tried: tried again only after a while (every frame, a server read a big add-on bus
     /// it could not load over and over and stood still for everybody).
-    failed: hashbrown::HashMap<(u32, String), std::time::Instant>,
+    failed: hashbrown::HashMap<(u32, String), web_time::Instant>,
 }
 
 /// What the frame knows that LAN play needs.
@@ -612,7 +612,7 @@ fn status_path() -> Option<PathBuf> {
                 && s.bytes()
                     .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
         })
-        .unwrap_or_else(|| std::process::id().to_string());
+        .unwrap_or_else(|| omsi_cfg::pid().to_string());
     Some(data_dir()?.join("lan").join(format!("{id}.json")))
 }
 
@@ -668,14 +668,49 @@ pub fn world_info(args: &Args) -> omsi_net::WorldInfo {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
+mod web_path {
+    pub use omsi_net::tunnel::Tunnel as TunnelT;
+    pub use omsi_net::ws::{WsClient as ClientT, WsGateway as GatewayT};
+}
+
+/// A page hosts nothing and tunnels nothing (its own connection is `Socket::Web`): the
+/// shapes `WsPath` keeps, empty.
+#[cfg(target_arch = "wasm32")]
+mod web_path {
+    use std::net::SocketAddr;
+    use std::sync::{Arc, Mutex};
+
+    pub struct GatewayT {
+        pub addr: SocketAddr,
+        pub info: Arc<Mutex<omsi_net::ws::ServerInfo>>,
+    }
+    pub struct TunnelT {
+        pub url: Arc<Mutex<Option<String>>>,
+    }
+    impl TunnelT {
+        pub fn alive(&mut self) -> bool {
+            false
+        }
+    }
+    pub struct ClientT {
+        pub local: SocketAddr,
+    }
+    impl ClientT {
+        pub fn reconnects(&self) -> usize {
+            0
+        }
+    }
+}
+
 /// The ways into a session besides UDP (see `omsi_net::ws`): the host's WebSocket gateway
 /// and its Cloudflare tunnel, or a joining game's WebSocket to a server or a tunnel. Kept
 /// for the whole session.
 struct WsPath {
-    gateway: Option<omsi_net::ws::WsGateway>,
-    tunnel: Option<omsi_net::tunnel::Tunnel>,
+    gateway: Option<web_path::GatewayT>,
+    tunnel: Option<web_path::TunnelT>,
     /// Held for its connection's lifetime (dropping it closes the link).
-    _client: Option<omsi_net::ws::WsClient>,
+    _client: Option<web_path::ClientT>,
     /// The WebSocket address joined through (`wss://…/ws`).
     url: Option<String>,
 }
@@ -705,6 +740,10 @@ pub fn tunnel_url() -> Option<String> {
 /// session's topic - the way in for a player whose router and ours cannot be punched
 /// through (the code alone found a friend across the world once, and then never again).
 /// `web_port` 0 picks the session port + 10.
+#[cfg(target_arch = "wasm32")]
+pub fn open_public_gateway(_session: &LanSession, _info: omsi_net::ws::ServerInfo, _web_port: u16, _want_tunnel: bool) {}
+
+#[cfg(not(target_arch = "wasm32"))]
 pub fn open_public_gateway(session: &LanSession, info: omsi_net::ws::ServerInfo, web_port: u16, want_tunnel: bool) {
     let Some(udp) = session.local_addr() else { return };
     let target = SocketAddr::from(([127, 0, 0, 1], udp.port()));
@@ -790,7 +829,7 @@ pub fn open_public_gateway(session: &LanSession, info: omsi_net::ws::ServerInfo,
                     }
                 }
             }
-            std::thread::sleep(Duration::from_secs(2));
+            omsi_cfg::sleep(Duration::from_secs(2));
         }
     });
 }
@@ -861,6 +900,12 @@ pub fn take_local_admin() -> Vec<String> {
 
 /// Joining game: reach `url` (a server's or a host's tunnel) over a WebSocket; the local
 /// address to join instead.
+#[cfg(target_arch = "wasm32")]
+fn ws_join_target(_url: &str) -> Result<String, String> {
+    Err("a page joins through its own WebSocket".into())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 fn ws_join_target(url: &str) -> Result<String, String> {
     let c = omsi_net::ws::WsClient::connect(url)?;
     let local = c.local;
@@ -893,7 +938,31 @@ pub fn start(args: &Args) -> Option<LanSession> {
             }
         }
         (None, Some(target)) => {
+            // a page: the session's datagrams go straight over the WebSocket, and nothing
+            // here may wait for the welcome (the page's own events deliver it)
+            #[cfg(target_arch = "wasm32")]
+            {
+                let Some(url) = omsi_net::ws::ws_url(target) else {
+                    write_failure(&format!("cannot join '{target}': give the server as https://… or wss://…"));
+                    return None;
+                };
+                return match LanSession::join_web(&url, &player_name(args), world) {
+                    Ok(s) => {
+                        if let Ok(mut w) = WS_PATH.lock() {
+                            *w = Some(WsPath { gateway: None, tunnel: None, _client: None, url: Some(url) });
+                        }
+                        write_status(&s, &Default::default(), None);
+                        Some(s)
+                    }
+                    Err(e) => {
+                        log::warn!("LAN: cannot join '{target}': {e}");
+                        write_failure(&format!("cannot join '{target}': {e}"));
+                        None
+                    }
+                };
+            }
             // a server's address (https://…, a trycloudflare name): over a WebSocket
+            #[cfg(not(target_arch = "wasm32"))]
             let direct = match omsi_net::ws::ws_url(target) {
                 Some(url) => match ws_join_target(&url) {
                     Ok(local) => local,
@@ -905,6 +974,8 @@ pub fn start(args: &Args) -> Option<LanSession> {
                 },
                 None => target.clone(),
             };
+            #[cfg(target_arch = "wasm32")]
+            let direct = target.clone();
             match LanSession::join(&direct, &player_name(args), world, Duration::from_secs(3)) {
                 Ok(s) => Some(s),
                 Err(e) => {
@@ -944,9 +1015,9 @@ pub fn start(args: &Args) -> Option<LanSession> {
             ..Default::default()
         };
         let t0 = Instant::now();
-        while t0.elapsed() < HOST_ANSWER_WAIT && !session.connected && session.rejected.is_none() {
+        while !cfg!(target_arch = "wasm32") && t0.elapsed() < HOST_ANSWER_WAIT && !session.connected && session.rejected.is_none() {
             session.tick(0.02, &planned);
-            std::thread::sleep(Duration::from_millis(20));
+            omsi_cfg::sleep(Duration::from_millis(20));
         }
         // nobody answered at the addresses of the code: the host's tunnel, if it posted one
         if session.welcome.is_none() && session.rejected.is_none() && args.lan_join.as_deref().map(|t| omsi_net::ws::ws_url(t).is_none()).unwrap_or(false) {
@@ -958,7 +1029,7 @@ pub fn start(args: &Args) -> Option<LanSession> {
                             let t1 = Instant::now();
                             while t1.elapsed() < WELCOME_WAIT * 2 && !s2.connected && s2.rejected.is_none() {
                                 s2.tick(0.02, &planned);
-                                std::thread::sleep(Duration::from_millis(20));
+                                omsi_cfg::sleep(Duration::from_millis(20));
                             }
                             session = s2;
                         }
@@ -1050,7 +1121,7 @@ pub fn share_mods(args: &mut Args, lan: &mut LanSession) {
                     log::info!("LAN mods: {line}");
                     note(lan, line);
                 }
-                std::thread::sleep(Duration::from_millis(50));
+                omsi_cfg::sleep(Duration::from_millis(50));
             }
             let (result, map) = worker.join().unwrap_or_else(|_| (Err("the download stopped".into()), args.map.clone()));
             args.map = map;
@@ -1086,13 +1157,24 @@ pub fn answering_while<T>(lan: &mut Option<LanSession>, bus: Option<&str>, work:
         bus: bus.unwrap_or_default().replace('\\', "/"),
         ..Default::default()
     };
+    // a page has no second thread to keep the session alive: its events keep it, and the
+    // world loads between them
+    #[cfg(target_arch = "wasm32")]
+    {
+        let _ = &planned;
+        let out = work();
+        *lan = Some(session);
+        return out;
+    }
+    #[cfg(not(target_arch = "wasm32"))]
     let stop = std::sync::atomic::AtomicBool::new(false);
+    #[cfg(not(target_arch = "wasm32"))]
     std::thread::scope(|s| {
         let keeper = s.spawn(|| {
             let mut session = session;
             while !stop.load(std::sync::atomic::Ordering::Relaxed) {
                 session.keepalive(0.05, &planned);
-                std::thread::sleep(Duration::from_millis(50));
+                omsi_cfg::sleep(Duration::from_millis(50));
             }
             session
         });
@@ -1363,13 +1445,13 @@ fn clock_gap(host: &omsi_sim::SimClock, mine: &omsi_sim::SimClock) -> f64 {
 fn write_failure(msg: &str) {
     let Some(p) = status_path() else { return };
     let _ = std::fs::create_dir_all(p.parent().unwrap());
-    let v = serde_json::json!({ "pid": std::process::id(), "role": "none", "error": msg, "updated": now_secs() });
+    let v = serde_json::json!({ "pid": omsi_cfg::pid(), "role": "none", "error": msg, "updated": now_secs() });
     let _ = std::fs::write(p, serde_json::to_vec_pretty(&v).unwrap_or_default());
 }
 
 fn now_secs() -> u64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
+    web_time::SystemTime::now()
+        .duration_since(web_time::UNIX_EPOCH)
         .map(|d| d.as_secs())
         .unwrap_or(0)
 }
@@ -1396,7 +1478,7 @@ fn write_status(lan: &LanSession, game: &LanGame, player: Option<&Player>) {
         .collect();
     let code = lan.code();
     let v = serde_json::json!({
-        "pid": std::process::id(),
+        "pid": omsi_cfg::pid(),
         "role": if lan.role == Role::Host { "host" } else { "client" },
         "name": lan.my_name,
         "code": code.as_ref().map(|c| c.encode()),
@@ -2227,7 +2309,7 @@ pub fn settle_spawn(
     let t0 = Instant::now();
     while t0.elapsed() < wait && lan.near.is_none() && lan.rejected.is_none() {
         lan.tick(0.02, &mine);
-        std::thread::sleep(Duration::from_millis(20));
+        omsi_cfg::sleep(Duration::from_millis(20));
     }
     match lan.near.clone() {
         Some(near) => {
@@ -3067,7 +3149,7 @@ pub fn tick(
                 scene,
                 frame.clock,
             ) else {
-                game.failed.insert(key, std::time::Instant::now());
+                game.failed.insert(key, web_time::Instant::now());
                 continue;
             };
             game.failed.remove(&key);

@@ -35,7 +35,7 @@ const SCRIPT_UPLOAD_BUDGET: usize = 4 << 20;
 /// the files they need (depot data, fonts) into the caches before the first real one of the
 /// type comes along in the middle of a drive.
 pub fn warm_up(world: &World, ty: &Arc<VehicleType>, hof: Option<Arc<omsi_vehicle::Hof>>) {
-    let t = std::time::Instant::now();
+    let t = web_time::Instant::now();
     let mut host = omsi_sim::VehicleHost::new(omsi_sim::SimClock::default());
     host.hof = hof;
     host.font_lib = Some(world.fonts.clone());
@@ -2937,7 +2937,7 @@ impl Traffic {
     }
 
     pub fn precache_random(&mut self, world: &World, renderer: &Renderer, scene: &mut Scene) {
-        let t0 = std::time::Instant::now();
+        let t0 = web_time::Instant::now();
         let sets = self.random_sets();
         for chunk in sets.chunks(3) {
             world.prefetch_vehicle_sets(renderer, chunk);
@@ -5133,7 +5133,7 @@ impl Traffic {
             self.mirror_tick(dt);
             return;
         }
-        let t_start = std::time::Instant::now();
+        let t_start = web_time::Instant::now();
         self.time += dt;
         self.day_time += dt as f64 * self.time_scale;
         self.last_dt = dt;
@@ -5346,7 +5346,7 @@ impl Traffic {
             users.extend(way_user_on(&self.net, b, 0, self.others_still.get(id).copied().unwrap_or(0.0), false));
         }
         self.way_users = users;
-        let t_plan = std::time::Instant::now();
+        let t_plan = web_time::Instant::now();
         let mut remove = Vec::new();
         let mut frames: Vec<Option<AiFrame>> = vec![None; self.cars.len()];
         let feet = self.footprints();
@@ -6144,7 +6144,7 @@ impl Traffic {
                     (p - v.pos).length() < UNSEEN_NEAR || v.frames(p, r);
             }
         }
-        let t_par = std::time::Instant::now();
+        let t_par = web_time::Instant::now();
         // The bodies and the scripts of the AI vehicles run in parallel: each car follows
         // its own way and its OMSI script is its own little machine reading only its own
         // state; with thirty cars and a dozen timetable buses they were the largest single
@@ -6168,7 +6168,7 @@ impl Traffic {
             work.par_iter_mut()
                 .with_min_len(4)
                 .for_each(|(state, body, vehicle, frame, trail)| {
-                    let t0 = std::time::Instant::now();
+                    let t0 = web_time::Instant::now();
                     let ground = vehicle.ground.clone();
                     let contact = vehicle.contact.clone();
                     let rail = body.kind == MotionKind::Rail;
@@ -6193,7 +6193,7 @@ impl Traffic {
                         vehicle.retrail(0.0, &|d| Some(behind(d)));
                     }
                     frame.steer_deg = body.steer;
-                    let t1 = std::time::Instant::now();
+                    let t1 = web_time::Instant::now();
                     vehicle.update_ai(dt, frame);
                     if profile && t0.elapsed().as_secs_f64() > 0.01 {
                         log::info!(

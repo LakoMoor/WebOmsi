@@ -77,7 +77,7 @@ pub struct Updater {
     pub auto_started: bool,
     pub relaunched: bool,
     /// This start follows an update to this version (shown for a few seconds).
-    pub updated: Option<(String, std::time::Instant)>,
+    pub updated: Option<(String, web_time::Instant)>,
 }
 
 impl Default for Updater {
@@ -603,7 +603,7 @@ pub fn cleanup_after_update() {
             if !left {
                 return;
             }
-            std::thread::sleep(std::time::Duration::from_millis(500));
+            omsi_cfg::sleep(std::time::Duration::from_millis(500));
         }
     });
 }
@@ -698,7 +698,7 @@ mod tests {
     /// had removed, the player's things left alone, the old files set aside.
     #[test]
     fn an_archive_replaces_the_program_and_nothing_else() {
-        let root = std::env::temp_dir().join(format!("omsi_update_{}", std::process::id()));
+        let root = std::env::temp_dir().join(format!("omsi_update_{}", omsi_cfg::pid()));
         let _ = std::fs::remove_dir_all(&root);
         let dir = root.join("install");
         std::fs::create_dir_all(dir.join("Vehicles/MyMod")).unwrap();

@@ -6,6 +6,7 @@ license.workspace = true
 description = "Reader for OMSI's line-oriented [keyword] configuration format and its text encodings"
 
 [dependencies]
+web-time = "1"
 encoding_rs.workspace = true
 thiserror.workspace = true
 log.workspace = true

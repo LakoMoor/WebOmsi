@@ -185,7 +185,7 @@ struct Playing {
     /// The status last shown on screen (the song, "no signal" ...).
     shown: String,
     /// The line a text display runs through (see `Radio::display_text`), and since when.
-    line: (String, std::time::Instant),
+    line: (String, web_time::Instant),
 }
 
 /// Characters in a line of a radio's text display (the "Magnitola" radio of P3ta's SOR
@@ -369,7 +369,7 @@ impl Radio {
                 log::info!("radio: station {} {name} ({url})", station + 1);
                 let buf = omsi_audio::radio::open(url);
                 let voice = audio.play_stream(buf.clone(), VoiceParams { gain: 0.0, ..Default::default() });
-                self.playing = Some(Playing { station, buf, voice, shown: String::new(), line: (String::new(), std::time::Instant::now()) });
+                self.playing = Some(Playing { station, buf, voice, shown: String::new(), line: (String::new(), web_time::Instant::now()) });
             }
         }
         let p = self.playing.as_mut()?;
@@ -404,7 +404,7 @@ impl Radio {
         let Some(p) = self.playing.as_mut() else { return Some(String::new()) };
         let line = display_line(&self.stations[p.station].0, &p.buf.status());
         if p.line.0 != line {
-            p.line = (line, std::time::Instant::now());
+            p.line = (line, web_time::Instant::now());
         }
         Some(marquee(&p.line.0, DISPLAY_WIDTH, p.line.1.elapsed().as_secs_f32()))
     }
@@ -447,7 +447,7 @@ mod tests {
 
     #[test]
     fn a_maps_stations_come_first_and_its_volume_counts_for_nothing() {
-        let dir = std::env::temp_dir().join(format!("omsi_map_radio_{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("omsi_map_radio_{}", omsi_cfg::pid()));
         let map = dir.join("maps").join("Mesto");
         std::fs::create_dir_all(&map).unwrap();
         std::fs::write(map.join("radio.cfg"), "# the town's stations\nvolume = 0.1\nMestske radio = http://example.org/mesto.mp3\nSecond = http://example.org/own.mp3\n").unwrap();

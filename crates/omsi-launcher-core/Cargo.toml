@@ -17,13 +17,12 @@ path = "src/main.rs"
 winresource = "0.1"
 
 [dependencies]
+web-time = "1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 anyhow.workspace = true
 rayon.workspace = true
 zip = { version = "2", default-features = false, features = ["deflate"] }
-sevenz-rust2 = { version = "0.22", default-features = false, features = ["util", "deflate"] }
-unrar-rs = { version = "0.10", default-features = false, features = ["crypto-rust"] }
 omsi-cfg = { path = "../omsi-cfg" }
 omsi-map = { path = "../omsi-map" }
 omsi-vehicle = { path = "../omsi-vehicle" }
@@ -32,11 +31,15 @@ omsi-content = { path = "../omsi-content" }
 omsi-model = { path = "../omsi-model" }
 omsi-net = { path = "../omsi-net" }
 
-[target.'cfg(unix)'.dependencies]
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+sevenz-rust2 = { version = "0.22", default-features = false, features = ["util", "deflate"] }
+unrar-rs = { version = "0.10", default-features = false, features = ["crypto-rust"] }
+
+[target.'cfg(all(unix, not(target_arch = "wasm32")))'.dependencies]
 libc = "0.2"
 
 [target.'cfg(windows)'.dependencies]
 windows = { version = "0.62", features = ["Win32_Foundation", "Win32_System_SystemInformation"] }
 
-[target.'cfg(not(target_os = "android"))'.dependencies]
+[target.'cfg(not(any(target_os = "android", target_arch = "wasm32")))'.dependencies]
 rfd = "0.15"

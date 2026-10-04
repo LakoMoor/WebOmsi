@@ -4,7 +4,7 @@
 use anyhow::{anyhow, bail, Context, Result};
 use glam::{DVec3, Mat4, Quat, Vec3, Vec4};
 use openxr as xr;
-use std::time::{Duration, Instant};
+use web_time::{Duration, Instant};
 use windows::core::Interface;
 use windows::Win32::Graphics::Direct3D12::{
     ID3D12CommandAllocator, ID3D12CommandList, ID3D12GraphicsCommandList, ID3D12PipelineState,

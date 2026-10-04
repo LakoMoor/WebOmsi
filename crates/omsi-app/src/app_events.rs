@@ -979,7 +979,7 @@ impl ApplicationHandler for App {
                             // menu at once)
                             if self.settings.head_tracking && self.headtrack.is_none() && self.headtrack_failed.is_none_or(|t| t.elapsed().as_secs_f32() > 5.0) {
                                 self.headtrack = crate::headtrack::HeadTracker::start(self.settings.head_tracking_port);
-                                self.headtrack_failed = self.headtrack.is_none().then(std::time::Instant::now);
+                                self.headtrack_failed = self.headtrack.is_none().then(web_time::Instant::now);
                             }
                             let tracked = self.headtrack.as_ref().and_then(|h| h.pose()).filter(|_| self.settings.head_tracking && matches!(self.view.as_str(), "driver" | "pax"));
                             #[cfg(windows)]
@@ -2638,7 +2638,7 @@ impl ApplicationHandler for App {
                         if let Some(rest) =
                             std::time::Duration::from_millis(16).checked_sub(now.elapsed())
                         {
-                            std::thread::sleep(rest);
+                            omsi_cfg::sleep(rest);
                         }
                     }
                     // max_fps (the original's [maxFPS]; OMSI_MAX_FPS for a test): the rest of
@@ -2671,7 +2671,7 @@ impl ApplicationHandler for App {
                         if let Some(rest) = std::time::Duration::from_secs_f64(1.0 / max_fps as f64)
                             .checked_sub(now.elapsed())
                         {
-                            std::thread::sleep(rest);
+                            omsi_cfg::sleep(rest);
                         }
                         *self.profile.entry("limiter").or_default() += __t.elapsed().as_secs_f64();
                     }

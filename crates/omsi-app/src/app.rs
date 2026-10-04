@@ -172,7 +172,7 @@ pub(crate) struct App {
     /// Head tracking (Settings → head tracking), started with the first frame that wants it.
     pub(crate) headtrack: Option<crate::headtrack::HeadTracker>,
     /// When head tracking last failed to start (tried again a few seconds later).
-    pub(crate) headtrack_failed: Option<std::time::Instant>,
+    pub(crate) headtrack_failed: Option<web_time::Instant>,
     /// Steering wheels, pedals, joysticks and gamepads (`Inputs/gamectrler.cfg`).
     pub(crate) controllers: Option<crate::controllers::Controllers>,
     /// OMSI's mouse control (`toggel_mouse_ctrl`, O): the cursor's place steers (across) and
@@ -387,6 +387,17 @@ impl App {
         if let Some(at) = at {
             attrs = attrs.with_position(at);
         }
+        // a page: the window is the page's canvas, as big as the page
+        #[cfg(target_arch = "wasm32")]
+        {
+            use winit::platform::web::WindowAttributesExtWebSys;
+            let (vw, vh) = crate::web::viewport();
+            attrs = attrs
+                .with_canvas(crate::web::canvas())
+                .with_append(false)
+                .with_prevent_default(true)
+                .with_inner_size(winit::dpi::LogicalSize::new(vw, vh));
+        }
         // the window size of the settings (pixels, #904) unless --size names one
         let resolution = crate::settings::Settings::resolution().filter(|_| self.args.size == crate::cli::DEFAULT_SIZE);
         if let Some((w, h)) = resolution {
@@ -526,7 +537,7 @@ impl App {
         self.envir = omsi_content::Envir::load(&self.args.root.join("envir.cfg")).ok();
         // the weather cycle: a first weather that suits the month, the others after it
         if crate::weather_cycle::is_cycle(self.args.weather.as_deref()) {
-            let seed = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_nanos() as u64).unwrap_or(7);
+            let seed = web_time::SystemTime::now().duration_since(web_time::UNIX_EPOCH).map(|d| d.as_nanos() as u64).unwrap_or(7);
             let mut c = crate::weather_cycle::Cycle::new(seed);
             let month = start_clock(&self.args).day_month().1;
             let all = crate::weather_cycle::installed();

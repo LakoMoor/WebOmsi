@@ -15,7 +15,7 @@
 
 use std::net::Ipv4Addr;
 use std::sync::Mutex;
-use std::time::{Duration, Instant};
+use web_time::{Duration, Instant};
 
 /// What an address is for.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -224,7 +224,7 @@ fn default_route_ip() -> Option<Ipv4Addr> {
     }
 }
 
-#[cfg(unix)]
+#[cfg(all(unix, not(target_arch = "wasm32")))]
 fn system_addresses() -> Vec<LocalAddr> {
     let mut out = Vec::new();
     // SAFETY: getifaddrs hands out a linked list we only read and give back with freeifaddrs

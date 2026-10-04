@@ -13,7 +13,7 @@ use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
+use web_time::{Duration, Instant};
 
 /// Where `cloudflared` is, if anywhere.
 pub fn find_cloudflared() -> Option<PathBuf> {

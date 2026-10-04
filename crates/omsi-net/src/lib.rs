@@ -76,17 +76,40 @@
 //! answers, and gives up with a message saying why that may be after `JOIN_TIMEOUT`.
 
 pub mod addrs;
-pub mod bridge;
 pub mod wire;
 pub mod world;
 pub mod ws;
+pub mod socket;
+
+/// The process id (a page has none).
+fn pid() -> u32 {
+    #[cfg(target_arch = "wasm32")]
+    {
+        1
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    std::process::id()
+}
+
+// What needs a computer's own network stack (routers, an HTTP relay, a tunnel program): the
+// browser build has stand-ins that do nothing (`web_stubs`).
+#[cfg(not(target_arch = "wasm32"))]
+pub mod bridge;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod tunnel;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod official;
+#[cfg(target_arch = "wasm32")]
+mod web_stubs;
+#[cfg(target_arch = "wasm32")]
+pub use web_stubs::{bridge, official, tunnel};
+
+pub use socket::Socket;
 
 use std::cell::Cell;
 use std::collections::HashMap;
 use std::net::{Ipv4Addr, SocketAddr, ToSocketAddrs, UdpSocket};
-use std::time::{Duration, Instant};
+use web_time::{Duration, Instant};
 
 pub use wire::{
     FLAG_BRAKE, FLAG_ELECTRICS, FLAG_ENGINE, FLAG_FOG, FLAG_HORN, FLAG_KNEELING, FLAG_REVERSE,
@@ -503,12 +526,12 @@ pub fn random_session_id() -> u64 {
     use std::hash::{BuildHasher, Hasher};
     let mut h = std::collections::hash_map::RandomState::new().build_hasher();
     h.write_u128(
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
+        web_time::SystemTime::now()
+            .duration_since(web_time::UNIX_EPOCH)
             .map(|d| d.as_nanos())
             .unwrap_or(0),
     );
-    h.write_u32(std::process::id());
+    h.write_u32(pid());
     let v = h.finish() & 0xFFFF_FFFF_FFFF;
     if v == 0 {
         1
@@ -1310,7 +1333,7 @@ fn vehicle_label(bus: &str) -> String {
 }
 
 pub struct LanSession {
-    socket: UdpSocket,
+    socket: Socket,
     pub role: Role,
     /// The host's address (clients): the one that answered, or the only one there is to try;
     /// None for the host and while several addresses are being tried.
@@ -1438,7 +1461,7 @@ fn local_addrs(port: u16) -> Vec<SocketAddr> {
 }
 
 impl LanSession {
-    fn new(socket: UdpSocket, role: Role, name: &str, world: WorldInfo) -> LanSession {
+    fn new(socket: Socket, role: Role, name: &str, world: WorldInfo) -> LanSession {
         let now = Instant::now();
         LanSession {
             socket,
@@ -1456,7 +1479,7 @@ impl LanSession {
                 .unwrap_or(JOIN_TIMEOUT),
             refused: 0,
             other_reject: None,
-            nonce: random_session_id() ^ ((std::process::id() as u64) << 48),
+            nonce: random_session_id() ^ ((pid() as u64) << 48),
             confirm: false,
             my_id: if role == Role::Host { 1 } else { 0 },
             my_name: clean_text(name, MAX_NAME),
@@ -1529,7 +1552,7 @@ impl LanSession {
                 Ok(socket) => {
                     socket.set_nonblocking(true)?;
                     socket.set_broadcast(true)?;
-                    let mut s = LanSession::new(socket, Role::Host, name, world);
+                    let mut s = LanSession::new(socket.into(), Role::Host, name, world);
                     s.session = random_session_id();
                     s.bridge = bridge::Bridge::start(true, s.session, local_addrs(p), p);
                     log::info!("LAN: hosting session {} on port {p} as '{name}' (protocol {PROTOCOL}), code {}", session_hex(s.session), s.code().map(|c| c.encode()).unwrap_or_default());
@@ -1554,7 +1577,7 @@ impl LanSession {
     ) -> std::io::Result<LanSession> {
         let socket = UdpSocket::bind(("0.0.0.0", 0))?;
         socket.set_nonblocking(true)?;
-        let mut s = LanSession::new(socket, Role::Client, name, world);
+        let mut s = LanSession::new(socket.into(), Role::Client, name, world);
         if addrs.len() == 1 {
             s.host = Some(addrs[0]);
         }
@@ -1587,6 +1610,18 @@ impl LanSession {
                 .map(|id| format!(" (session {})", session_hex(id)))
                 .unwrap_or_default()
         );
+        Ok(s)
+    }
+
+    /// Join a server's WebSocket gateway from a page (`url` as `ws::ws_url` gives it): the
+    /// session talks to the gateway as to a host it knows the address of.
+    #[cfg(target_arch = "wasm32")]
+    pub fn join_web(url: &str, name: &str, world: WorldInfo) -> Result<LanSession, String> {
+        let socket = Socket::Web(socket::web::WebDatagram::connect(url)?);
+        let mut s = LanSession::new(socket, Role::Client, name, world);
+        s.host = Some(socket::WEB_PEER);
+        s.candidates = vec![socket::WEB_PEER];
+        log::info!("LAN: joining {url} over a WebSocket as '{name}'");
         Ok(s)
     }
 
@@ -2168,7 +2203,9 @@ impl LanSession {
     /// what arrives is taken in.
     pub fn keepalive(&mut self, dt: f32, mine: &Pose) {
         if let Some(b) = self.bridge.as_mut() {
-            b.tick(dt, &self.socket);
+            if let Some(udp) = self.socket.as_udp() {
+                b.tick(dt, udp);
+            }
         }
         self.hello_acc += dt;
         if self.role == Role::Client && self.hello_acc >= 2.0 {
@@ -2203,7 +2240,9 @@ impl LanSession {
             None => wall,
         });
         if let Some(b) = self.bridge.as_mut() {
-            b.tick(dt, &self.socket);
+            if let Some(udp) = self.socket.as_udp() {
+                b.tick(dt, udp);
+            }
             // the host's addresses the rendezvous told (a client still trying)
             if self.role == Role::Client && !self.connected {
                 for a in b.host_addrs() {

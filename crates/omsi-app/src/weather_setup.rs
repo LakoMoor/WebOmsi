@@ -200,7 +200,7 @@ pub(crate) fn setup_sky(
     let kind = weather.map(|w| w.clouds.0.trim().to_string()).unwrap_or_default();
     let typed = cloud_texture(&args.root, &kind);
     let cover = typed.or_else(|| omsi_texture::decode_file(&omsi_cfg::resolve_path(&args.root, "Texture\\clouds.tga")).ok());
-    let t = std::time::Instant::now();
+    let t = web_time::Instant::now();
     let field = cloud_field(cover.as_ref());
     log::debug!("cloud field made in {:.0} ms", t.elapsed().as_secs_f64() * 1000.0);
     let clouds = Some(renderer.add_texture(scene, &field, true));

@@ -35,7 +35,7 @@ use omsi_sim::VehicleType;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::{mpsc, Arc};
-use std::time::Instant;
+use web_time::Instant;
 
 /// How far around a client its cars, people and light programs are sent (m).
 pub const CAR_RADIUS: f64 = 650.0;

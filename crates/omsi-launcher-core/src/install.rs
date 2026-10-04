@@ -164,7 +164,7 @@ static NEXT_ID: AtomicU64 = AtomicU64::new(1);
 static RUNNING: Mutex<()> = Mutex::new(());
 
 pub fn now_secs() -> u64 {
-    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0)
+    web_time::SystemTime::now().duration_since(web_time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0)
 }
 
 /// All jobs of this launcher, newest first.
@@ -253,7 +253,7 @@ fn start_inner(content: PathBuf, root: Option<PathBuf>, source: PathBuf, mode: I
 /// Run an install on this thread and return how it ended (the CLI).
 pub fn run_blocking(content: PathBuf, root: Option<PathBuf>, source: PathBuf, mode: InstallMode, cancel_after: Option<std::time::Duration>, verbose: bool) -> Progress {
     let job = start(content, root, source, mode, false);
-    let t0 = std::time::Instant::now();
+    let t0 = web_time::Instant::now();
     let mut last = String::new();
     loop {
         let p = job.snapshot();
@@ -272,7 +272,7 @@ pub fn run_blocking(content: PathBuf, root: Option<PathBuf>, source: PathBuf, mo
                 job.cancel();
             }
         }
-        std::thread::sleep(std::time::Duration::from_millis(50));
+        omsi_cfg::sleep(std::time::Duration::from_millis(50));
     }
 }
 
@@ -286,7 +286,7 @@ impl std::fmt::Display for Cancelled {
 impl std::error::Error for Cancelled {}
 
 fn staging_dir(content: &Path, id: u64) -> PathBuf {
-    content.join(STAGING).join(format!("{}-{id}", std::process::id()))
+    content.join(STAGING).join(format!("{}-{id}", omsi_cfg::pid()))
 }
 
 // ---------------------------------------------------------------------------------------
@@ -397,7 +397,7 @@ pub fn cleanup_stale(data_dir: &Path, content: Option<&Path>) -> Vec<String> {
             Some((p, i)) => (p.parse::<u32>().unwrap_or(0), i.parse::<u64>().unwrap_or(0)),
             None => (0, 0),
         };
-        let mine = pid == std::process::id();
+        let mine = pid == omsi_cfg::pid();
         let stale = if mine { !active.contains(&id) } else { pid == 0 || !pid_alive(pid) };
         if stale {
             let size = tree_size(&e.path());
@@ -744,7 +744,10 @@ fn archive_kind(path: &Path) -> Option<ArchiveKind> {
 /// sizes are checked against the content volume before any data is written; the later
 /// install step hard-links these staged files into their final layout.
 fn unpack_archive(job: &Job, content: &Path, src: &Path, dest: &Path, kind: ArchiveKind) -> Result<()> {
-    let (files, bytes) = match kind {
+    let (files, bytes): (u64, u64) = match kind {
+        #[cfg(target_arch = "wasm32")]
+        ArchiveKind::SevenZip | ArchiveKind::Rar => return Err(anyhow!("7z and RAR archives are not unpacked in the browser")),
+        #[cfg(not(target_arch = "wasm32"))]
         ArchiveKind::SevenZip => {
             let reader = sevenz_rust2::ArchiveReader::open(src, sevenz_rust2::Password::empty())
                 .with_context(|| format!("{} is not a readable 7z archive", src.display()))?;
@@ -753,6 +756,7 @@ fn unpack_archive(job: &Job, content: &Path, src: &Path, dest: &Path, kind: Arch
             let bytes = entries.iter().filter(|e| e.has_stream && !e.is_directory).fold(0u64, |sum, e| sum.saturating_add(e.size));
             (files, bytes)
         }
+        #[cfg(not(target_arch = "wasm32"))]
         ArchiveKind::Rar => {
             let archive = unrar_rs::RarArchive::open(std::fs::File::open(src)?)
                 .with_context(|| format!("{} is not a readable RAR archive", src.display()))?;
@@ -782,6 +786,9 @@ fn unpack_archive(job: &Job, content: &Path, src: &Path, dest: &Path, kind: Arch
     }
     std::fs::create_dir_all(dest).with_context(|| format!("creating {}", dest.display()))?;
     match kind {
+        #[cfg(target_arch = "wasm32")]
+        ArchiveKind::SevenZip | ArchiveKind::Rar => return Err(anyhow!("7z and RAR archives are not unpacked in the browser")),
+        #[cfg(not(target_arch = "wasm32"))]
         ArchiveKind::SevenZip => {
             let mut done = 0u64;
             sevenz_rust2::decompress_file_with_extract_fn(src, dest, |entry, reader, target| {
@@ -799,6 +806,7 @@ fn unpack_archive(job: &Job, content: &Path, src: &Path, dest: &Path, kind: Arch
                 Ok(wrote)
             }).with_context(|| format!("unpacking {} (the archive may be damaged or encrypted)", src.display()))?;
         }
+        #[cfg(not(target_arch = "wasm32"))]
         ArchiveKind::Rar => {
             let mut archive = unrar_rs::RarArchive::open(std::fs::File::open(src)?)
                 .with_context(|| format!("opening {}", src.display()))?;
@@ -1125,7 +1133,7 @@ fn run(job: &Job, content: &Path, root: Option<&Path>) -> Result<()> {
             }
             if job.files_done.fetch_add(1, Ordering::Relaxed) + 1 == job.stall_at {
                 while !job.cancelled() {
-                    std::thread::sleep(std::time::Duration::from_millis(1));
+                    omsi_cfg::sleep(std::time::Duration::from_millis(1));
                 }
             }
         }
@@ -1429,13 +1437,17 @@ pub fn inspect(content: &Path, root: Option<&Path>, src: &Path) -> Result<Source
     let job = Job { id: 0, source: src.to_path_buf(), mode: InstallMode::Auto, from_inbox: false, cancel: AtomicBool::new(false), progress: Mutex::new(Progress::default()), bytes_done: AtomicU64::new(0), files_done: AtomicU64::new(0), linked: Mutex::new(Vec::new()), stall_at: u64::MAX };
     let archive_bytes = std::fs::metadata(src).map(|m| m.len()).unwrap_or(0);
     if !is_zip {
-        let (files, unpacked) = match archive.unwrap() {
+        let (files, unpacked): (u64, u64) = match archive.unwrap() {
+            #[cfg(target_arch = "wasm32")]
+            ArchiveKind::SevenZip | ArchiveKind::Rar => return Err(anyhow!("7z and RAR archives are not unpacked in the browser")),
+            #[cfg(not(target_arch = "wasm32"))]
             ArchiveKind::SevenZip => {
                 let a = sevenz_rust2::ArchiveReader::open(src, sevenz_rust2::Password::empty()).with_context(|| format!("{} is not a readable 7z archive", src.display()))?;
                 let entries = &a.archive().files;
                 (entries.iter().filter(|e| e.has_stream && !e.is_directory).count() as u64,
                     entries.iter().filter(|e| e.has_stream && !e.is_directory).fold(0u64, |n, e| n.saturating_add(e.size)))
             }
+            #[cfg(not(target_arch = "wasm32"))]
             ArchiveKind::Rar => {
                 let a = unrar_rs::RarArchive::open(std::fs::File::open(src)?)
                     .with_context(|| format!("{} is not a readable RAR archive", src.display()))?;
@@ -1562,7 +1574,7 @@ mod tests {
     }
 
     fn tmp(name: &str) -> PathBuf {
-        let d = std::env::temp_dir().join(format!("omsi-launcher-test-{}-{name}", std::process::id()));
+        let d = std::env::temp_dir().join(format!("omsi-launcher-test-{}-{name}", omsi_cfg::pid()));
         let _ = std::fs::remove_dir_all(&d);
         std::fs::create_dir_all(&d).unwrap();
         d
@@ -1731,13 +1743,13 @@ mod tests {
 
     fn wait_for(job: &Job, files: u64) {
         while job.snapshot().files_done < files && job.snapshot().finished.is_none() {
-            std::thread::sleep(std::time::Duration::from_millis(1));
+            omsi_cfg::sleep(std::time::Duration::from_millis(1));
         }
     }
 
     fn wait_done(job: &Job) -> Progress {
         while job.snapshot().finished.is_none() {
-            std::thread::sleep(std::time::Duration::from_millis(5));
+            omsi_cfg::sleep(std::time::Duration::from_millis(5));
         }
         job.snapshot()
     }

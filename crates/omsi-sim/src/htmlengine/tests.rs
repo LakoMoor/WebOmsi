@@ -281,7 +281,7 @@ fn a_timer_sees_the_latest_vehicle_without_an_update_function() {
     let mut r = EngineRenderer::new(40, 40, html);
     r.set_vehicle(&sample_vehicle());
     r.set_vars(&[], &[]);
-    std::thread::sleep(std::time::Duration::from_millis(30));
+    omsi_cfg::sleep(std::time::Duration::from_millis(30));
     assert!(r.poll_frame().is_some());
     assert_eq!(r.text_of("e").as_deref(), Some("2"));
 }
@@ -703,7 +703,7 @@ fn bmp(w: u32, h: u32, rgb: [u8; 3]) -> Vec<u8> {
 
 /// A page in a fresh folder that holds `red.bmp` (4x4 red) and `blue.bmp` (2x2 blue).
 fn picture_page(name: &str, html: &str, w: u32, h: u32) -> EngineRenderer {
-    let dir = std::env::temp_dir().join(format!("omsi_htmlimg_{}_{}", name, std::process::id()));
+    let dir = std::env::temp_dir().join(format!("omsi_htmlimg_{}_{}", name, omsi_cfg::pid()));
     std::fs::create_dir_all(&dir).unwrap();
     std::fs::write(dir.join("red.bmp"), bmp(4, 4, [255, 0, 0])).unwrap();
     std::fs::write(dir.join("blue.bmp"), bmp(2, 2, [0, 0, 255])).unwrap();
@@ -815,7 +815,7 @@ fn scripts_can_set_the_source_of_a_picture() {
 
 #[test]
 fn pictures_are_resized_once_and_kept() {
-    let dir = std::env::temp_dir().join(format!("omsi_htmlimg_store_{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("omsi_htmlimg_store_{}", omsi_cfg::pid()));
     std::fs::create_dir_all(&dir).unwrap();
     std::fs::write(dir.join("red.bmp"), bmp(4, 4, [255, 0, 0])).unwrap();
     let store = ImageStore::new(vec![dir]);
@@ -851,7 +851,7 @@ fn style_sheet_urls_are_made_relative_to_the_page() {
 
 #[test]
 fn linked_style_sheet_and_script_are_inlined_with_their_pictures() {
-    let dir = std::env::temp_dir().join(format!("omsi_htmlimg_page_{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("omsi_htmlimg_page_{}", omsi_cfg::pid()));
     std::fs::create_dir_all(dir.join("css")).unwrap();
     std::fs::create_dir_all(dir.join("img")).unwrap();
     std::fs::write(dir.join("img").join("red.bmp"), bmp(4, 4, [255, 0, 0])).unwrap();
@@ -875,7 +875,7 @@ fn linked_style_sheet_and_script_are_inlined_with_their_pictures() {
 #[test]
 #[ignore]
 fn bench_htmlengine() {
-    use std::time::{Duration, Instant};
+    use web_time::{Duration, Instant};
 
     fn stats(mut v: Vec<Duration>) -> String {
         v.sort();

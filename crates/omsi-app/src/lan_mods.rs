@@ -27,7 +27,7 @@ use std::io::{BufRead, BufReader, Read, Write};
 use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
+use web_time::{Duration, Instant};
 
 const MAGIC: &str = "OMSIMODS/1";
 /// The most one file may have (a map tile or a texture is a few MB; a sound a few tens).
@@ -466,7 +466,7 @@ fn handle(stream: TcpStream, session: u64, ready: &Mutex<Option<Arc<(Manifest, V
             out.write_all(b"ERR the host has no list\n")?;
             return Ok(());
         }
-        std::thread::sleep(Duration::from_millis(100));
+        omsi_cfg::sleep(Duration::from_millis(100));
     };
     let (manifest, sources) = (&data.0, &data.1);
     writeln!(out, "OK")?;
@@ -545,7 +545,7 @@ pub fn remove_stale() {
 }
 
 fn process_alive(pid: u32) -> bool {
-    if pid == std::process::id() {
+    if pid == omsi_cfg::pid() {
         return true;
     }
     #[cfg(unix)]
@@ -730,7 +730,7 @@ pub fn fetch(args: &mut Args, host: SocketAddr, session: u64, progress: &mut dyn
     };
     let mut cache = cache;
     let base = sandbox_base().ok_or("no home folder")?;
-    let dir = base.join(std::process::id().to_string());
+    let dir = base.join(omsi_cfg::pid().to_string());
     std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
     let store = store_dir().ok_or("no home folder")?;
     std::fs::create_dir_all(&store).map_err(|e| e.to_string())?;
@@ -779,7 +779,7 @@ pub fn fetch(args: &mut Args, host: SocketAddr, session: u64, progress: &mut dyn
     let mut attempt = 0;
     while !left.is_empty() {
         if attempt > 0 {
-            std::thread::sleep(Duration::from_millis(500 * attempt as u64));
+            omsi_cfg::sleep(Duration::from_millis(500 * attempt as u64));
             match open(host, session) {
                 Ok(c) => (out, input) = c,
                 Err(e) if attempt < 8 => {

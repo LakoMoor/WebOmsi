@@ -356,7 +356,7 @@ pub(crate) fn run_offscreen(
     // the METAR sync of a dedicated server: the report is downloaded in the background (at
     // once, then every ten minutes) and its values are told to the players
     let srv_metar: Option<String> = if server { crate::server::SERVER_METAR.get().cloned().flatten() } else { None };
-    let mut srv_metar_due = std::time::Instant::now();
+    let mut srv_metar_due = web_time::Instant::now();
     let mut srv_metar_rx: Option<std::sync::mpsc::Receiver<Option<omsi_content::weather::Weather>>> = None;
     // (the weather's name on the status page)
     let mut srv_weather_name = if weather.path.to_string_lossy().starts_with("metar:") {
@@ -396,7 +396,7 @@ pub(crate) fn run_offscreen(
                             srv_metar_rx = None;
                             // (a failed download is tried again in a minute)
                             let wait = if report.is_some() { 600 } else { 60 };
-                            srv_metar_due = std::time::Instant::now() + std::time::Duration::from_secs(wait);
+                            srv_metar_due = web_time::Instant::now() + std::time::Duration::from_secs(wait);
                             if let Some(w) = report {
                                 if let Some(wire) = crate::weather_setup::report_wire(&w) {
                                     if wire != l.weather() {
@@ -409,11 +409,11 @@ pub(crate) fn run_offscreen(
                         }
                         Some(Err(std::sync::mpsc::TryRecvError::Disconnected)) => {
                             srv_metar_rx = None;
-                            srv_metar_due = std::time::Instant::now() + std::time::Duration::from_secs(60);
+                            srv_metar_due = web_time::Instant::now() + std::time::Duration::from_secs(60);
                         }
                         _ => {}
                     }
-                } else if std::time::Instant::now() >= srv_metar_due {
+                } else if web_time::Instant::now() >= srv_metar_due {
                     let (tx, rx) = std::sync::mpsc::channel();
                     srv_metar_rx = Some(rx);
                     let icao = icao.clone();
@@ -479,7 +479,7 @@ pub(crate) fn run_offscreen(
                 }
             }
             if lan_off.is_none() {
-                std::thread::sleep(std::time::Duration::from_secs_f32(dt));
+                omsi_cfg::sleep(std::time::Duration::from_secs_f32(dt));
             }
         }
         if let Some(t) = traffic.as_mut() {
@@ -1081,7 +1081,7 @@ pub(crate) fn run_offscreen(
                 }
             }
             // the other games run in real time
-            std::thread::sleep(std::time::Duration::from_secs_f32(dt));
+            omsi_cfg::sleep(std::time::Duration::from_secs_f32(dt));
         }
         // mid-run snapshots (relative to the first overtake with --follow auto)
         let auto_base = match args.follow.as_deref() {

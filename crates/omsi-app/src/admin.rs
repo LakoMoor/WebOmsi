@@ -160,7 +160,7 @@ fn host_action(app: &mut App, action: &str, by: Option<u32>) {
         "weather" => match arg.trim().split_once(' ').map(|(a, b)| (a, b.trim())).unwrap_or((arg.trim(), "")) {
             ("cycle", _) => {
                 if app.weather_cycle.take().is_none() {
-                    let seed = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_nanos() as u64).unwrap_or(7);
+                    let seed = web_time::SystemTime::now().duration_since(web_time::UNIX_EPOCH).map(|d| d.as_nanos() as u64).unwrap_or(7);
                     let mut c = crate::weather_cycle::Cycle::new(seed);
                     // (the first change soon, not in an hour)
                     c.next_in = 60.0;
@@ -466,7 +466,7 @@ pub(crate) struct ServerAdmin {
     challenges: std::collections::HashMap<u32, String>,
     /// When wrong answers came lately (the lock counts them, whoever sent them: a player
     /// who reconnects is somebody new).
-    failures: Vec<std::time::Instant>,
+    failures: Vec<web_time::Instant>,
 }
 
 /// Wrong answers within `LOCK_WINDOW` that lock the administration for everybody.
@@ -523,7 +523,7 @@ pub(crate) fn server_command(lan: &mut LanSession, from: u32, text: &str, adm: &
                     log::info!("server: player {from} administers the server now");
                     lan.command(from, "admin-ok");
                 } else {
-                    adm.failures.push(std::time::Instant::now());
+                    adm.failures.push(web_time::Instant::now());
                     log::warn!("server: player {from} gave a wrong admin password");
                     lan.command(from, "admin-no");
                 }

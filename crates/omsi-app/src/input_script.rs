@@ -3788,7 +3788,7 @@ impl App {
     pub(crate) fn take_screenshot(&mut self) {
         let dir = crate::startup::content_dir().unwrap_or_else(|| self.args.root.clone()).join("Screenshots");
         let _ = std::fs::create_dir_all(&dir);
-        let secs = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0);
+        let secs = web_time::SystemTime::now().duration_since(web_time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0);
         let path = dir.join(format!("omsi_{secs}.png"));
         self.service_msg = Some((format!("Screenshot: {}", path.display()), 4.0));
         self.shot = Some(path);
@@ -4076,7 +4076,7 @@ mod gear_lever_tests {
     #[test]
     fn the_gear_is_read_where_the_gates_store_it() {
         let program = |vars: &str, osc: &str| {
-            let dir = std::env::temp_dir().join(format!("omsi_gates_{}_{}", std::process::id(), vars.len()));
+            let dir = std::env::temp_dir().join(format!("omsi_gates_{}_{}", omsi_cfg::pid(), vars.len()));
             std::fs::create_dir_all(&dir).unwrap();
             let (vl, sc) = (dir.join("varlist.txt"), dir.join("antrieb.osc"));
             std::fs::write(&vl, vars).unwrap();
@@ -4261,7 +4261,7 @@ impl crate::App {
             self.service_msg = Some(("No server code: not in a LAN session or on a server".into(), 3.0));
             return;
         };
-        #[cfg(not(target_os = "android"))]
+        #[cfg(not(any(target_os = "android", target_arch = "wasm32")))]
         {
             thread_local! {
                 // (kept alive: on X11 the text is gone when the clipboard is dropped)
@@ -4276,7 +4276,7 @@ impl crate::App {
             });
             self.service_msg = Some(if ok { ("Server code copied".into(), 3.0) } else { (format!("{}: {code}", omsi_ui::tr("Server code")), 8.0) });
         }
-        #[cfg(target_os = "android")]
+        #[cfg(any(target_os = "android", target_arch = "wasm32"))]
         {
             self.service_msg = Some((format!("{}: {code}", omsi_ui::tr("Server code")), 8.0));
         }

@@ -222,7 +222,7 @@ impl Showroom {
         let root = look.root.clone();
         let map_cfg = omsi_cfg::resolve_path(&root, &look.map);
         let date = start_clock(&args).date_code();
-        let t0 = std::time::Instant::now();
+        let t0 = web_time::Instant::now();
         let world = match scene::World::open(&root, &map_cfg, date) {
             Ok(w) => {
                 log::info!("showroom: {} opened in {:.2} s", map_cfg.display(), t0.elapsed().as_secs_f64());
@@ -268,7 +268,7 @@ impl Showroom {
     }
 
     fn place(&mut self, renderer: &Renderer, r: Ready) -> Shown {
-        let t0 = std::time::Instant::now();
+        let t0 = web_time::Instant::now();
         let mut scene = renderer.new_scene();
         let args = args_for(&r.look);
         let weather = load_weather(&args);

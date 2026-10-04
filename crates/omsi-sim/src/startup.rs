@@ -95,7 +95,7 @@ mod tests {
     fn starts_a_bus_with_custom_battery_and_starter_names() {
         let dir = std::env::temp_dir().join(format!(
             "omsi-startup-custom-controls-{}",
-            std::process::id()
+            omsi_cfg::pid()
         ));
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(
@@ -141,7 +141,7 @@ mod tests {
     fn logs_in_and_selects_neutral_before_starting() {
         let dir = std::env::temp_dir().join(format!(
             "omsi-startup-login-neutral-{}",
-            std::process::id()
+            omsi_cfg::pid()
         ));
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(
@@ -184,7 +184,7 @@ mod tests {
 
     #[test]
     fn treats_real_main_as_power_before_two_stage_starter() {
-        let dir = std::env::temp_dir().join(format!("omsi-startup-real-main-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("omsi-startup-real-main-{}", omsi_cfg::pid()));
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(dir.join("real.bus"), "[model]\nmodel.cfg\n[varnamelist]\n1\nvars.txt\n[script]\n1\nmain.osc\n").unwrap();
         std::fs::write(dir.join("model.cfg"), "").unwrap();

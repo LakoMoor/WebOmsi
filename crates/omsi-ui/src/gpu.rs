@@ -292,16 +292,25 @@ impl Gpu {
     /// with thousands of errors and took the frame rate down with it (#217). A failed one
     /// is None: nothing draws from it, and the next upload tries again.
     fn vertex_buffer(device: &wgpu::Device, size: u64) -> Option<wgpu::Buffer> {
-        let oom = device.push_error_scope(wgpu::ErrorFilter::OutOfMemory);
-        let valid = device.push_error_scope(wgpu::ErrorFilter::Validation);
-        let buf = device.create_buffer(&wgpu::BufferDescriptor { label: Some("omsi-ui vertices"), size, usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST, mapped_at_creation: false });
-        let invalid = pollster::block_on(valid.pop());
-        let out_of_memory = pollster::block_on(oom.pop());
-        match invalid.or(out_of_memory) {
-            None => Some(buf),
-            Some(e) => {
-                log::warn!("omsi-ui: a vertex buffer of {size} bytes could not be made: {e}");
-                None
+        let desc = wgpu::BufferDescriptor { label: Some("omsi-ui vertices"), size, usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST, mapped_at_creation: false };
+        // (in a browser the scopes can only be read asynchronously: the buffer is taken as made)
+        #[cfg(target_arch = "wasm32")]
+        {
+            Some(device.create_buffer(&desc))
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let oom = device.push_error_scope(wgpu::ErrorFilter::OutOfMemory);
+            let valid = device.push_error_scope(wgpu::ErrorFilter::Validation);
+            let buf = device.create_buffer(&desc);
+            let invalid = pollster::block_on(valid.pop());
+            let out_of_memory = pollster::block_on(oom.pop());
+            match invalid.or(out_of_memory) {
+                None => Some(buf),
+                Some(e) => {
+                    log::warn!("omsi-ui: a vertex buffer of {size} bytes could not be made: {e}");
+                    None
+                }
             }
         }
     }

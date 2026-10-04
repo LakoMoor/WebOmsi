@@ -616,9 +616,9 @@ mod tests {
     fn seasonal_textures_keep_pack_priority_and_terrain_mapping() {
         let dir = std::env::temp_dir().join(format!(
             "omsi-texture-season-{}-{}",
-            std::process::id(),
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
+            omsi_cfg::pid(),
+            web_time::SystemTime::now()
+                .duration_since(web_time::UNIX_EPOCH)
                 .unwrap()
                 .as_nanos(),
         ));
@@ -661,7 +661,7 @@ mod tests {
 
     #[test]
     fn dds_precedes_exact_names_but_preserves_folder_priority() {
-        let dir = std::env::temp_dir().join(format!("omsi-dds-priority-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("omsi-dds-priority-{}", omsi_cfg::pid()));
         let local = dir.join("local");
         let global = dir.join("global");
         std::fs::create_dir_all(&local).unwrap();
@@ -687,7 +687,7 @@ mod tests {
 
     #[test]
     fn a_spline_texture_missing_from_its_folders_comes_from_another_spline_folder() {
-        let dir = std::env::temp_dir().join(format!("omsi-elsewhere-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("omsi-elsewhere-{}", omsi_cfg::pid()));
         let (own, other) = (dir.join("Splines/Pack/Roads/texture"), dir.join("Splines/Pack/Paths/texture"));
         std::fs::create_dir_all(&own).unwrap();
         std::fs::create_dir_all(&other).unwrap();
@@ -706,7 +706,7 @@ mod tests {
     /// A mesh's texture name with Windows' quirks (Ahlheim's `anz-oben.jpg.`) finds the file.
     #[test]
     fn texture_names_as_windows_reads_them() {
-        let dir = std::env::temp_dir().join(format!("omsi-texture-names-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("omsi-texture-names-{}", omsi_cfg::pid()));
         std::fs::create_dir_all(dir.join("texture")).unwrap();
         std::fs::write(dir.join("texture").join("anz-oben.jpg"), b"x").unwrap();
         let tex = dir.join("texture");

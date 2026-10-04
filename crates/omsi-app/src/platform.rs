@@ -31,7 +31,14 @@ pub(crate) fn take_leave() -> bool {
 /// The on-screen controls: always on a phone; `OMSI_TOUCH=1` shows them on a computer
 /// (driven by `touch` commands of `OMSI_INPUT`, or the mouse as a finger).
 pub(crate) fn touch_controls() -> bool {
-    MOBILE || omsi_cfg::env::var_os("OMSI_TOUCH").is_some()
+    #[cfg(target_arch = "wasm32")]
+    {
+        crate::web::touch_device()
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        MOBILE || omsi_cfg::env::var_os("OMSI_TOUCH").is_some()
+    }
 }
 
 /// The phone's tilt as a steering wheel's turn (-1 left .. 1 right), when the tilt sensor
@@ -59,6 +66,8 @@ pub(crate) fn set_tilt(on: bool) {
 pub(crate) fn buzz(ms: u32) {
     #[cfg(target_os = "android")]
     crate::android::vibrate(ms);
-    #[cfg(not(target_os = "android"))]
+    #[cfg(target_arch = "wasm32")]
+    crate::web::vibrate(ms);
+    #[cfg(not(any(target_os = "android", target_arch = "wasm32")))]
     let _ = ms;
 }

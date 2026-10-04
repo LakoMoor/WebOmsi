@@ -76,7 +76,7 @@ pub(crate) struct Player {
     pub(crate) startup: Option<omsi_sim::startup::StartUp>,
     /// When the running auto-start began (one that has gone on for long is given up by the
     /// next Shift+U).
-    pub(crate) startup_at: Option<std::time::Instant>,
+    pub(crate) startup_at: Option<web_time::Instant>,
     /// The ticket key was pressed this frame (sell the requested ticket).
     pub(crate) give_ticket: bool,
     /// OMSI's `change_give` / `change_take` keys: hand the passenger
@@ -998,7 +998,7 @@ impl Player {
         let s = omsi_sim::startup::StartUp::new(&self.vehicle, &bound);
         let shutting_down = s.shutting_down();
         self.startup = Some(s);
-        self.startup_at = Some(std::time::Instant::now());
+        self.startup_at = Some(web_time::Instant::now());
         if shutting_down {
             "Switching the vehicle off ...".to_string()
         } else {

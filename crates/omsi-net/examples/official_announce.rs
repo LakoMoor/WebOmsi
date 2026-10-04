@@ -2,7 +2,7 @@
 //! (`OMSI_OFFICIAL_KEY` in the server does the same from inside):
 //! `official_announce <key file> <server.log>` follows the log for the tunnel's address and
 //! posts it, signed, now and every five minutes (see `omsi_net::official`).
-use std::time::{Duration, Instant};
+use web_time::{Duration, Instant};
 
 fn latest_tunnel(log: &str) -> Option<String> {
     let text = std::fs::read(log).ok()?;

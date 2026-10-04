@@ -26,7 +26,7 @@ struct Device {
 pub(crate) struct MacHid {
     manager: CFRetained<IOHIDManager>,
     devices: Vec<Device>,
-    last_scan: Option<std::time::Instant>,
+    last_scan: Option<web_time::Instant>,
     count: isize,
 }
 
@@ -77,7 +77,7 @@ impl MacHid {
         if self.last_scan.is_some_and(|t| t.elapsed().as_secs_f32() < 2.0) {
             return;
         }
-        self.last_scan = Some(std::time::Instant::now());
+        self.last_scan = Some(web_time::Instant::now());
         let Some(set) = self.manager.devices() else {
             self.devices.clear();
             self.count = 0;

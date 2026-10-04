@@ -6,6 +6,7 @@ license.workspace = true
 description = "Texture loading (bmp/tga/dds/jpg/png) with OMSI's lookup rules and .cfg sidecars (unit mc_texMan)"
 
 [dependencies]
+web-time = "1"
 omsi-cfg = { path = "../omsi-cfg" }
 image = { version = "0.25", default-features = false, features = ["bmp", "tga", "dds", "jpeg", "png"] }
 thiserror.workspace = true

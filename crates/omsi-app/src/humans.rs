@@ -3539,7 +3539,7 @@ impl Humans {
         renderer: &Renderer,
         scene: &mut Scene,
     ) -> bool {
-        let started = std::time::Instant::now();
+        let started = web_time::Instant::now();
         self.tick_stages.clear();
         let took = self.tick_inner(dt, world, bus, traffic, renderer, scene);
         let ms = started.elapsed().as_secs_f64() * 1000.0;
@@ -3590,10 +3590,10 @@ impl Humans {
         renderer: &Renderer,
         scene: &mut Scene,
     ) -> bool {
-        let mut mark = std::time::Instant::now();
+        let mut mark = web_time::Instant::now();
         macro_rules! stage {
             ($name:expr) => {{
-                let now = std::time::Instant::now();
+                let now = web_time::Instant::now();
                 self.tick_stages.push(($name, (now - mark).as_secs_f64() * 1000.0));
                 mark = now;
             }};
@@ -4421,7 +4421,7 @@ impl Humans {
         for inst in self.hidden.drain(..) {
             renderer.set_params(scene, inst, &[], false, &[]);
         }
-        let started = std::time::Instant::now();
+        let started = web_time::Instant::now();
         self.sync_frame = self.sync_frame.wrapping_add(1);
         let eye = self.eye;
         let from = eye.map(|e| e.pos).unwrap_or(camera);
@@ -4500,7 +4500,7 @@ impl Humans {
                 .filter(|(_, go)| **go)
                 .for_each(|(p, _)| pose_one(p));
         }
-        let upload = std::time::Instant::now();
+        let upload = web_time::Instant::now();
         for (p, &go) in self.people.iter_mut().zip(&due) {
             if go {
                 if p.pose_changed || !p.skinned {
@@ -5403,7 +5403,7 @@ mod tests {
     #[test]
     fn map_humans_load_nested_paths_and_preserve_weights() {
         let root = std::env::temp_dir().join(format!(
-            "omsi-map-human-paths-{}", std::process::id()
+            "omsi-map-human-paths-{}", omsi_cfg::pid()
         ));
         let nested = root.join("Humans/JP_Test/Child_1");
         std::fs::create_dir_all(&nested).unwrap();
@@ -5566,7 +5566,7 @@ mod tests {
     /// walk through the bent joint moves on without a jump.
     #[test]
     fn articulated_cabins_are_joined_through_the_bellows() {
-        let dir = std::env::temp_dir().join(format!("omsi-humans-test-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("omsi-humans-test-{}", omsi_cfg::pid()));
         std::fs::create_dir_all(&dir).unwrap();
         let write = |name: &str, text: &str| std::fs::write(dir.join(name), text).unwrap();
         // front: door 0 at the front right, exit 1 in the middle, link to the rear at 3
@@ -5767,7 +5767,7 @@ mod tests {
 
     #[test]
     fn doors_open_falls_back_when_exit_vars_are_undeclared() {
-        let dir = std::env::temp_dir().join(format!("omsi-doors-open-test-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("omsi-doors-open-test-{}", omsi_cfg::pid()));
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(
             dir.join("test.bus"),
@@ -5811,7 +5811,7 @@ mod tests {
 
     #[test]
     fn doors_open_reads_pax_vars_the_script_writes_without_declaring() {
-        let dir = std::env::temp_dir().join(format!("omsi-doors-open-undeclared-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("omsi-doors-open-undeclared-{}", omsi_cfg::pid()));
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(
             dir.join("test.bus"),
@@ -5834,7 +5834,7 @@ mod tests {
 
     #[test]
     fn doors_open_3door_bus_handles_middle_and_rear_exits() {
-        let dir = std::env::temp_dir().join(format!("omsi-doors-3door-test-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("omsi-doors-3door-test-{}", omsi_cfg::pid()));
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(
             dir.join("test.bus"),

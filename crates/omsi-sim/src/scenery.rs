@@ -31,7 +31,7 @@ mod placement_tests {
 
     #[test]
     fn busstop_frame_resolves_each_placements_texture() {
-        let dir = std::env::temp_dir().join(format!("omsi_busstop_freetex_{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("omsi_busstop_freetex_{}", omsi_cfg::pid()));
         std::fs::create_dir_all(&dir).unwrap();
         let vars = dir.join("strings.txt");
         let script = dir.join("BusStop.osc");

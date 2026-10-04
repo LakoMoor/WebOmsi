@@ -309,7 +309,7 @@ mod tests {
 
     #[test]
     fn finds_a_set_beside_the_texture() {
-        let dir = std::env::temp_dir().join(format!("omsi_pbr_{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("omsi_pbr_{}", omsi_cfg::pid()));
         let _ = std::fs::create_dir_all(&dir);
         for f in ["Bus.dds", "Bus_NN.png", "bus_rr.tga", "bus_mm.png", "bus_aa.jpg", "busstop_nn.png", "lamp.tga", "lamp_r.tga", "lamp_n.tga", "tram.dds", "tram_normal_gl.png"] {
             std::fs::write(dir.join(f), b"x").unwrap();

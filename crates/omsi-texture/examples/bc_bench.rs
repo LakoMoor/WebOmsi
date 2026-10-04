@@ -30,7 +30,7 @@ fn main() {
     files.truncate(limit);
     let imgs: Vec<omsi_texture::Image> = files.iter().filter_map(|p| omsi_texture::decode_file(p).ok()).filter(|i| i.width % 4 == 0 && i.height % 4 == 0 && i.width >= 64).collect();
     let texels: u64 = imgs.iter().map(|i| i.width as u64 * i.height as u64).sum();
-    let t = std::time::Instant::now();
+    let t = web_time::Instant::now();
     let mut psnrs = Vec::new();
     for img in &imgs {
         let opaque = img.rgba.chunks_exact(4).all(|p| p[3] == 255);

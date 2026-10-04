@@ -77,7 +77,8 @@ pub fn builtin_vars(root: &Path) -> Vec<String> {
                 .map(|l| l.trim().to_string())
                 .filter(|l| !l.is_empty())
                 .collect(),
-            Err(_) => Vec::new(),
+            // (an installation without the program folder: the names every road vehicle has)
+            Err(_) => include_str!("builtin_varlist_roadvehicle.txt").lines().map(|l| l.trim().to_string()).filter(|l| !l.is_empty()).collect(),
         };
     for a in 0..8 {
         for side in ["L", "R"] {
@@ -4179,7 +4180,7 @@ mod tests {
         static NEXT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
         let dir = std::env::temp_dir().join(format!(
             "omsi_restore_{}_{}",
-            std::process::id(),
+            omsi_cfg::pid(),
             NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
         ));
         std::fs::create_dir_all(&dir).unwrap();

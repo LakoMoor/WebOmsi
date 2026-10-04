@@ -14,7 +14,7 @@ use serde_json::{json, Value};
 #[derive(Default)]
 pub struct PagesView {
     pub new_driver: String,
-    pub confirm_delete: Option<std::time::Instant>,
+    pub confirm_delete: Option<web_time::Instant>,
     /// The "reset every setting" dialog is open.
     pub confirm_reset: bool,
     pub kb_filter: [String; 2],
@@ -48,7 +48,7 @@ pub struct PadsView {
     pub dirty: bool,
     /// The button last pressed on the shown device and when: its line is lit, so that one
     /// sees which it is and what it does, and can give it an action there.
-    pub last_pressed: Option<(usize, std::time::Instant)>,
+    pub last_pressed: Option<(usize, web_time::Instant)>,
 }
 
 /// The set-up assistant of a device: the player lets go of everything, then turns the wheel
@@ -61,7 +61,7 @@ pub struct Wizard {
     pub rest: [Option<f32>; 8],
     pub at: Vec<[Option<f32>; 8]>,
     pub error: Option<String>,
-    calibration: Option<(std::time::Instant, crate::ffb_calibration::Calibration)>,
+    calibration: Option<(web_time::Instant, crate::ffb_calibration::Calibration)>,
     ff_choice: Option<bool>,
     test_strength: f32,
 }
@@ -117,7 +117,7 @@ pub fn profile(l: &mut Launcher, area: Rect) {
             }
             l.pages.confirm_delete = None;
         } else {
-            l.pages.confirm_delete = Some(std::time::Instant::now());
+            l.pages.confirm_delete = Some(web_time::Instant::now());
         }
     }
     let y = inner.y + ROW + 10.0;
@@ -1595,7 +1595,7 @@ fn game_controllers(l: &mut Launcher, body: Rect) {
             let rows = shown_buttons.max(n + 1).div_ceil(cols).max(1);
             let row = n % rows;
             l.ui.scroll_to("pad-detail", buttons_start_y + row as f32 * (ROW + 4.0), ROW, list.h);
-            pv.last_pressed = Some((n, std::time::Instant::now()));
+            pv.last_pressed = Some((n, web_time::Instant::now()));
             let now = d.buttons.get(n).map(|b| b.0.clone()).filter(|a| !a.is_empty());
             let label = match n.checked_sub(crate::controllers::HAT_BUTTONS) {
                 Some(h) => format!("hat {} {}", h / 4 + 1, ["up", "right", "down", "left"][h % 4]),
@@ -1752,7 +1752,7 @@ fn feedback_setup(
                     *active = true;
                     w.error = None;
                     log::info!("FFB calibration: device {}, raw steering axis {:?}, test strength {:.0}%", device.unwrap().name, axis, w.test_strength * 100.0);
-                    w.calibration = Some((std::time::Instant::now(), crate::ffb_calibration::Calibration::new(w.test_strength)));
+                    w.calibration = Some((web_time::Instant::now(), crate::ffb_calibration::Calibration::new(w.test_strength)));
                 }
             }
             y += 48.0;
@@ -1880,7 +1880,7 @@ fn save_keys(l: &mut Launcher, vr_binding: bool) {
 // --- sessions ---------------------------------------------------------------------------------
 
 fn ago(t: u64) -> String {
-    let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(t);
+    let now = web_time::SystemTime::now().duration_since(web_time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(t);
     let s = now.saturating_sub(t);
     if s < 60 {
         format!("{s} s")
@@ -2377,7 +2377,7 @@ mod wizard_tests {
         pads.feedback_test = true;
         pads.wizard = Some(super::Wizard {
             step: super::WIZARD_STEPS.len(), rest: [None; 8], at: Vec::new(), error: None,
-            calibration: Some((std::time::Instant::now(), crate::ffb_calibration::Calibration::new(crate::ffb_calibration::PULSE_FORCE))), ff_choice: None, test_strength: crate::ffb_calibration::PULSE_FORCE,
+            calibration: Some((web_time::Instant::now(), crate::ffb_calibration::Calibration::new(crate::ffb_calibration::PULSE_FORCE))), ff_choice: None, test_strength: crate::ffb_calibration::PULSE_FORCE,
         });
         pads.cancel_feedback_test();
         assert!(!pads.feedback_test);

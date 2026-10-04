@@ -1,0 +1,6 @@
+[package]
+name = "ureq-web"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Stand-in for the parts of ureq the game uses, for the browser build: every request fails (a page has no sockets; its own downloads go through fetch)"

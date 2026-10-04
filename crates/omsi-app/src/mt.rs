@@ -15,7 +15,7 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::OnceLock;
-use std::time::{Duration, Instant};
+use web_time::{Duration, Instant};
 
 const MODEL_REPO: &str = "JustFrederik/nllb-200-distilled-600M-ct2-int8";
 const MODEL_FILES: [&str; 4] = ["config.json", "shared_vocabulary.txt", "tokenizer.json", "model.bin"];

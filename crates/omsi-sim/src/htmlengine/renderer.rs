@@ -10,7 +10,7 @@ pub struct EngineRenderer {
     pub(crate) js: Interp,
     pub(crate) dirty: bool,
     pub(crate) warned: bool,
-    pub(crate) start: std::time::Instant,
+    pub(crate) start: web_time::Instant,
     /// A press is on the page and its release has not come yet (a click needs both).
     pub(crate) pressed: bool,
     /// The pictures of the page (`<img>`, `background-image`), loaded when first drawn.
@@ -62,7 +62,7 @@ impl EngineRenderer {
             js,
             dirty: true,
             warned,
-            start: std::time::Instant::now(),
+            start: web_time::Instant::now(),
             pressed: false,
             imgs: Arc::new(ImageStore::new(Vec::new())),
             cache: Mutex::new(None),
@@ -252,7 +252,7 @@ impl EngineRenderer {
     }
 
     pub(crate) fn render(&self) -> Vec<u8> {
-        let started = std::time::Instant::now();
+        let started = web_time::Instant::now();
         let mut cv = Canvas { w: self.width, h: self.height, px: vec![0; (self.width * self.height * 4) as usize] };
         with_fonts(|reg, bold| {
             let lay = Layouter { dom: &self.js.dom, reg, bold, vw: self.width as f32, vh: self.height as f32, imgs: &*self.imgs };

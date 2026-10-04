@@ -629,9 +629,9 @@ mod tests {
     fn profiles_survive_replacing_the_file_and_stay_separate_per_bus() {
         let dir = std::env::temp_dir().join(format!(
             "openomsi-vr-nav-{}-{}",
-            std::process::id(),
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
+            omsi_cfg::pid(),
+            web_time::SystemTime::now()
+                .duration_since(web_time::UNIX_EPOCH)
                 .unwrap()
                 .as_nanos()
         ));

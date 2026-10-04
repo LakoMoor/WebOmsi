@@ -1010,7 +1010,7 @@ impl Navigator {
             if let Some(net) = net {
                 let anchor = f.bus.truncate();
                 let mut p = Painter::new();
-                let t0 = std::time::Instant::now();
+                let t0 = web_time::Instant::now();
                 build_roads(&mut p, net, anchor);
                 if omsi_cfg::env::var_os("OMSI_DEBUG_NAV").is_some() {
                     log::info!("navigator: roads around ({:.0}, {:.0}) in {:.1} ms: {} vertices", anchor.x, anchor.y, t0.elapsed().as_secs_f64() * 1000.0, p.verts.len());
@@ -1845,7 +1845,7 @@ pub struct Streets {
 const SIGN_ALONG: f64 = 90.0;
 
 fn build_streets(net: &Network, signs: &[(DVec3, f64, String)]) -> Streets {
-    let t0 = std::time::Instant::now();
+    let t0 = web_time::Instant::now();
     let n = net.lanes.len();
     let mut names: Vec<String> = Vec::new();
     let mut index: HashMap<String, u32> = HashMap::new();

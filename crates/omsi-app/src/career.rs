@@ -339,7 +339,7 @@ impl Career {
         let home = std::env::var_os("HOME").or_else(|| std::env::var_os("USERPROFILE")).map(PathBuf::from).unwrap_or_default();
         let dir = home.join(".openomsi").join("sessions");
         std::fs::create_dir_all(&dir)?;
-        let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0);
+        let now = web_time::SystemTime::now().duration_since(web_time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0);
         let driver = self.driver.as_ref().map(|d| d.name.clone()).or_else(|| self.path.as_ref().and_then(|p| p.file_stem().map(|s| s.to_string_lossy().to_string()))).unwrap_or_else(|| "Driver".into());
         let v = serde_json::json!({
             "time": now,
@@ -365,7 +365,7 @@ impl Career {
             "comfort": self.comfort_rating(),
             "ticketing": self.ticket_rating(),
         });
-        let path = dir.join(format!("{now}-{}.json", std::process::id()));
+        let path = dir.join(format!("{now}-{}.json", omsi_cfg::pid()));
         std::fs::write(&path, serde_json::to_vec_pretty(&v)?)?;
         log::info!("session written to {}", path.display());
         Ok(())

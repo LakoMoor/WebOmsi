@@ -795,7 +795,7 @@ mod tests {
 
     #[test]
     fn stfilter_marks_a_script_texture_for_mipmaps() {
-        let dir = std::env::temp_dir().join(format!("omsi_host_stfilter_test_{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("omsi_host_stfilter_test_{}", omsi_cfg::pid()));
         std::fs::create_dir_all(&dir).unwrap();
         let script = dir.join("matrix.osc");
         std::fs::write(
@@ -824,7 +824,7 @@ mod tests {
     fn atron_unlock_filter_relock_publishes_the_released_image() {
         let dir = std::env::temp_dir().join(format!(
             "omsi_host_atron_test_{}",
-            std::process::id()
+            omsi_cfg::pid()
         ));
         std::fs::create_dir_all(&dir).unwrap();
         let script = dir.join("atron.osc");
@@ -867,7 +867,7 @@ mod tests {
     fn atron_arrival_check_does_not_clear_sales_text_without_a_timetable() {
         let dir = std::env::temp_dir().join(format!(
             "omsi_host_atron_arrival_test_{}",
-            std::process::id()
+            omsi_cfg::pid()
         ));
         std::fs::create_dir_all(&dir).unwrap();
         let script = dir.join("arrival.osc");
@@ -898,7 +898,7 @@ mod tests {
     /// damages the engine, one at the front only the general account.
     #[test]
     fn a_collision_block_reads_the_energy_twice() {
-        let dir = std::env::temp_dir().join(format!("omsi_host_test_{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("omsi_host_test_{}", omsi_cfg::pid()));
         std::fs::create_dir_all(&dir).unwrap();
         let script = dir.join("collision.osc");
         std::fs::write(

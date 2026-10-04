@@ -7,7 +7,7 @@
 //! does through its TrackIR support. A UDP pose wins over it.
 
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
+use web_time::{Duration, Instant};
 
 /// The last pose received: x, y, z (cm; right, up, back) and yaw, pitch, roll (degrees).
 #[derive(Debug, Clone, Copy, Default)]
@@ -62,7 +62,7 @@ impl HeadTracker {
                     let got = match &sock {
                         Some(sock) => sock.recv(&mut buf),
                         None => {
-                            std::thread::sleep(Duration::from_millis(wait));
+                            omsi_cfg::sleep(Duration::from_millis(wait));
                             Err(std::io::ErrorKind::WouldBlock.into())
                         }
                     };
@@ -122,7 +122,7 @@ fn freetrack_pose(yaw: f32, pitch: f32, roll: f32, x: f32, y: f32, z: f32) -> He
 #[cfg(windows)]
 mod freetrack {
     use super::{freetrack_pose, HeadPose};
-    use std::time::{Duration, Instant};
+    use web_time::{Duration, Instant};
     use windows::core::w;
     use windows::Win32::Foundation::HANDLE;
     use windows::Win32::System::Memory::{MapViewOfFile, OpenFileMappingW, FILE_MAP_READ};

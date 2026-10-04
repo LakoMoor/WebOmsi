@@ -35,7 +35,7 @@ use std::io::{BufRead, BufReader, Write};
 use std::net::{SocketAddr, TcpStream};
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::{self, Receiver, Sender, SyncSender, TryRecvError};
-use std::time::{Duration, Instant};
+use web_time::{Duration, Instant};
 
 /// The port of the plugin (SaltyChat's WebSocket port, for those who know it).
 pub(crate) const DEFAULT_PORT: u16 = 38088;
@@ -245,7 +245,7 @@ fn random_hex(bytes: usize) -> String {
     while out.len() < bytes * 2 {
         let mut h = std::collections::hash_map::RandomState::new().build_hasher();
         h.write_u64(n);
-        h.write_u128(std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_nanos()).unwrap_or(0));
+        h.write_u128(web_time::SystemTime::now().duration_since(web_time::UNIX_EPOCH).map(|d| d.as_nanos()).unwrap_or(0));
         out.push_str(&format!("{:016x}", h.finish()));
         n += 1;
     }
@@ -290,7 +290,7 @@ fn idle(out: &Receiver<String>, wait: Duration) -> bool {
         match out.try_recv() {
             Ok(_) => {}
             Err(TryRecvError::Disconnected) => return false,
-            Err(TryRecvError::Empty) => std::thread::sleep(Duration::from_millis(20)),
+            Err(TryRecvError::Empty) => omsi_cfg::sleep(Duration::from_millis(20)),
         }
     }
     true
@@ -758,7 +758,7 @@ mod tests {
     }
 
     fn scratch_key(name: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("omsi-voice-test-{}-{name}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("omsi-voice-test-{}-{name}", omsi_cfg::pid()));
         let _ = std::fs::remove_dir_all(&dir);
         dir.join("voice-plugin.key")
     }
@@ -804,7 +804,7 @@ mod tests {
         let deadline = Instant::now() + Duration::from_secs(5);
         while Instant::now() < deadline && v.refused.is_none() {
             v.tick(0.01, ("Max", 1), None, &[]);
-            std::thread::sleep(Duration::from_millis(5));
+            omsi_cfg::sleep(Duration::from_millis(5));
         }
         assert_eq!(v.hud_line().as_deref(), Some("Voice: another openOMSI game is already linked"));
         assert!(!v.status.linked);
@@ -855,7 +855,7 @@ mod tests {
             if let Ok((c, _)) = listener.accept() {
                 conn = Some(c);
             }
-            std::thread::sleep(Duration::from_millis(10));
+            omsi_cfg::sleep(Duration::from_millis(10));
         }
         let mut conn = conn.expect("the game links to the plugin");
         conn.set_nonblocking(false).unwrap();
@@ -888,7 +888,7 @@ mod tests {
         let until = Instant::now() + Duration::from_secs(2);
         while Instant::now() < until && !(v.status.in_channel && v.speaks("Anna", 2)) {
             v.tick(0.01, ("Max", 1), Some(me), &others);
-            std::thread::sleep(Duration::from_millis(5));
+            omsi_cfg::sleep(Duration::from_millis(5));
         }
         assert!(v.status.in_channel);
         assert!(v.speaks("Anna", 2));

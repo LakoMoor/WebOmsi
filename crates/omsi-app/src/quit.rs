@@ -73,7 +73,7 @@ pub fn install(wake: impl FnOnce(i32) + Send + 'static) {
                 wake(sig);
                 return;
             }
-            std::thread::sleep(std::time::Duration::from_millis(100));
+            omsi_cfg::sleep(std::time::Duration::from_millis(100));
         });
         if let Err(e) = spawned {
             log::warn!("no quit signal watcher ({e}): SIGTERM ends the game without saving");

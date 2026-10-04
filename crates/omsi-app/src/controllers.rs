@@ -618,7 +618,7 @@ pub struct Controllers {
     #[cfg(all(target_os = "linux", target_pointer_width = "64"))]
     wheel: Option<crate::evdev_ff::Wheel>,
     #[cfg(all(target_os = "linux", target_pointer_width = "64"))]
-    wheel_tried: Option<(String, std::time::Instant)>,
+    wheel_tried: Option<(String, web_time::Instant)>,
 }
 
 impl Controllers {
@@ -866,7 +866,7 @@ impl Controllers {
             let other = self.wheel.as_ref().is_some_and(|w| w.name != name);
             let retry = self.wheel.is_none() && self.wheel_tried.as_ref().is_none_or(|(n, t)| *n != name || t.elapsed() > std::time::Duration::from_secs(2));
             if other || retry {
-                self.wheel_tried = Some((name.clone(), std::time::Instant::now()));
+                self.wheel_tried = Some((name.clone(), web_time::Instant::now()));
                 self.wheel = crate::evdev_ff::Wheel::open(&name);
             }
             if let Some(w) = self.wheel.as_mut() {

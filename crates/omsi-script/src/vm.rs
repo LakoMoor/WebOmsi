@@ -583,7 +583,7 @@ mod tests {
     fn prog(src: &str) -> Program {
         static N: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
         let n = N.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-        let dir = std::env::temp_dir().join(format!("omsi_script_test_{}_{n}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("omsi_script_test_{}_{n}", omsi_cfg::pid()));
         std::fs::create_dir_all(&dir).unwrap();
         let script = dir.join("t.osc");
         std::fs::write(&script, src).unwrap();
@@ -743,7 +743,7 @@ mod tests {
     #[test]
     fn unknown_string_words_are_skipped() {
         let src = "{init}\n\"km \" \"12\" $ (S.$.s)\n\"a\" \"b\" $=> $++ 30 $SetLengthM (S.L.a)\n\"12\" 1 $CutEnd $StrToFloat (S.L.b)\n\"12\" 1 $cutEnd $StrToFloat (S.L.result)\n{end}\n";
-        let dir = std::env::temp_dir().join(format!("omsi_script_words_{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("omsi_script_words_{}", omsi_cfg::pid()));
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(dir.join("t.osc"), src).unwrap();
         std::fs::write(dir.join("v.txt"), "a\nb\nresult\n").unwrap();

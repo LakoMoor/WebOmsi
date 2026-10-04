@@ -50,15 +50,43 @@ pub fn lower_thread_priority() {
 /// The pool for background jobs that are not tiles: texture compression (the upgrades of
 /// textures first uploaded plain) and the timetable's fleet read ahead. A quarter of the
 /// cores, at least one, at a lower priority (see `lower_thread_priority`).
+#[cfg(not(target_arch = "wasm32"))]
 pub fn background_pool() -> &'static rayon::ThreadPool {
     static POOL: std::sync::OnceLock<rayon::ThreadPool> = std::sync::OnceLock::new();
     POOL.get_or_init(|| {
         let n = (std::thread::available_parallelism().map(|n| n.get()).unwrap_or(4) / 4).max(1);
         rayon::ThreadPoolBuilder::new()
             .num_threads(n)
+            .use_current_thread_on_web()
             .thread_name(|i| format!("background {i}"))
             .start_handler(|_| lower_thread_priority())
             .build()
             .expect("background pool")
     })
+}
+
+/// A pool of the page's one thread: a page cannot start threads, so its pools are the
+/// thread that asks (jobs run where they are waited for).
+pub trait WebPool {
+    fn use_current_thread_on_web(self) -> Self;
+}
+
+impl WebPool for rayon::ThreadPoolBuilder {
+    fn use_current_thread_on_web(self) -> Self {
+        #[cfg(target_arch = "wasm32")]
+        {
+            self.num_threads(1).use_current_thread()
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        self
+    }
+}
+
+/// Run `f` off the frame: on the background pool, or - on a page, which has one thread -
+/// right here.
+pub fn spawn_background(f: impl FnOnce() + Send + 'static) {
+    #[cfg(target_arch = "wasm32")]
+    f();
+    #[cfg(not(target_arch = "wasm32"))]
+    background_pool().spawn(f);
 }

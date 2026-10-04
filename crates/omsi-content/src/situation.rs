@@ -191,7 +191,7 @@ mod tests {
     #[test]
     fn situation_round_trips_padded_device_strings_and_duty_identity() {
         let path =
-            std::env::temp_dir().join(format!("omsi_situation_strings_{}.osn", std::process::id()));
+            std::env::temp_dir().join(format!("omsi_situation_strings_{}.osn", omsi_cfg::pid()));
         let sit = Situation {
             vehicles: vec![SituationVehicle {
                 file: "Vehicles/Test.bus".into(),

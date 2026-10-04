@@ -75,7 +75,7 @@ struct Voice {
     lp: [f32; 2],
     /// The Doppler shift: the distance to the listener when the position last came, when,
     /// and the (smoothed) pitch factor it gives.
-    doppler: (f32, Option<std::time::Instant>, f32),
+    doppler: (f32, Option<web_time::Instant>, f32),
 }
 
 /// OMSI's `sound_doppler`: a sound coming closer is higher, one going away lower.
@@ -112,7 +112,7 @@ struct Shared {
     /// (with the time they were given, for the Doppler shift). The game sets every voice's
     /// parameters every frame; through the voice list's lock each of those calls waited
     /// for a whole block to be mixed.
-    updates: Mutex<Vec<(VoiceId, VoiceParams, std::time::Instant)>>,
+    updates: Mutex<Vec<(VoiceId, VoiceParams, web_time::Instant)>>,
     listener: Mutex<Listener>,
     /// The echo of an underpass, fed from the mix.
     reverb: Mutex<Reverb>,
@@ -318,7 +318,7 @@ impl Shared {
 /// Parameters for voice `v`, given at `now` with the listener at `listener`: the Doppler
 /// shift from how fast the distance to the listener changes (the bus's own sounds move with
 /// the listener and keep their pitch).
-fn apply_params(v: &mut Voice, params: VoiceParams, now: std::time::Instant, listener: Vec3) {
+fn apply_params(v: &mut Voice, params: VoiceParams, now: web_time::Instant, listener: Vec3) {
     if let (Some(p), true) = (params.position, params.doppler && DOPPLER.load(Ordering::Relaxed)) {
         let dist = (p - listener).length();
         let (last, at, factor) = v.doppler;
@@ -373,13 +373,13 @@ pub struct AudioEngine {
     /// changed (a watcher thread looks every two seconds).
     reopen: Arc<AtomicBool>,
     /// When the stream was last opened (at most one new stream a second).
-    opened: std::cell::Cell<std::time::Instant>,
+    opened: std::cell::Cell<web_time::Instant>,
     shared: Arc<Shared>,
     next_id: AtomicU64,
     /// Clips by file; `None` for a file that is missing or unreadable (not tried again). With
     /// when each was last asked for (see `trim_clips`).
-    clips: Arc<Mutex<HashMap<PathBuf, (Option<Arc<Clip>>, std::time::Instant)>>>,
-    last_trim: Mutex<std::time::Instant>,
+    clips: Arc<Mutex<HashMap<PathBuf, (Option<Arc<Clip>>, web_time::Instant)>>>,
+    last_trim: Mutex<web_time::Instant>,
     /// Files a background reader is working on (see `clips_ready`).
     loading: Arc<Mutex<hashbrown::HashSet<PathBuf>>>,
     pub enabled: bool,
@@ -411,7 +411,7 @@ fn watch_default_device(first: String, reopen: std::sync::Weak<AtomicBool>) {
     let _ = std::thread::Builder::new().name("audio device".into()).spawn(move || {
         let mut current = first;
         loop {
-            std::thread::sleep(std::time::Duration::from_secs(2));
+            omsi_cfg::sleep(std::time::Duration::from_secs(2));
             let Some(flag) = reopen.upgrade() else { return };
             let name = cpal::default_host().default_output_device().and_then(|d| d.name().ok()).unwrap_or_default();
             if name != current {
@@ -430,7 +430,7 @@ impl AudioEngine {
             stream: std::cell::RefCell::new(None),
             device: std::cell::RefCell::new(String::new()),
             reopen: Arc::new(AtomicBool::new(false)),
-            opened: std::cell::Cell::new(std::time::Instant::now()),
+            opened: std::cell::Cell::new(web_time::Instant::now()),
             shared: Arc::new(Shared {
                 voices: Mutex::new(Vec::new()),
                 updates: Mutex::new(Vec::new()),
@@ -443,7 +443,7 @@ impl AudioEngine {
             }),
             next_id: AtomicU64::new(1),
             clips: Default::default(),
-            last_trim: Mutex::new(std::time::Instant::now()),
+            last_trim: Mutex::new(web_time::Instant::now()),
             loading: Default::default(),
             enabled: true,
         }
@@ -466,11 +466,11 @@ impl AudioEngine {
             stream: std::cell::RefCell::new(None),
             device: std::cell::RefCell::new(String::new()),
             reopen: reopen.clone(),
-            opened: std::cell::Cell::new(std::time::Instant::now()),
+            opened: std::cell::Cell::new(web_time::Instant::now()),
             shared,
             next_id: AtomicU64::new(1),
             clips: Default::default(),
-            last_trim: Mutex::new(std::time::Instant::now()),
+            last_trim: Mutex::new(web_time::Instant::now()),
             loading: Default::default(),
             enabled: false,
         };
@@ -541,7 +541,7 @@ impl AudioEngine {
         if !self.enabled || self.opened.get().elapsed().as_secs_f32() < 1.0 || !self.reopen.swap(false, Ordering::Relaxed) {
             return;
         }
-        self.opened.set(std::time::Instant::now());
+        self.opened.set(web_time::Instant::now());
         let before = self.device.borrow().clone();
         if self.open_default() {
             let now = self.device.borrow().clone();
@@ -557,13 +557,13 @@ impl AudioEngine {
     /// A clip from the cache, read now if it is not there.
     pub fn load_clip(&self, path: &Path) -> Option<Arc<Clip>> {
         if let Some(c) = self.clips.lock().get_mut(path) {
-            c.1 = std::time::Instant::now();
+            c.1 = web_time::Instant::now();
             return c.0.clone();
         }
         let clip = read_clip(path);
         self.clips.lock().insert(
             path.to_path_buf(),
-            (clip.clone(), std::time::Instant::now()),
+            (clip.clone(), web_time::Instant::now()),
         );
         clip
     }
@@ -578,7 +578,7 @@ impl AudioEngine {
             if last.elapsed().as_secs_f32() < 10.0 {
                 return 0;
             }
-            *last = std::time::Instant::now();
+            *last = web_time::Instant::now();
         }
         let mut freed = 0usize;
         self.clips.lock().retain(|_, (clip, used)| {
@@ -605,7 +605,7 @@ impl AudioEngine {
         }
         let missing: Vec<PathBuf> = {
             let mut clips = self.clips.lock();
-            let now = std::time::Instant::now();
+            let now = web_time::Instant::now();
             paths
                 .iter()
                 .filter(|p| match clips.get_mut(*p) {
@@ -638,7 +638,7 @@ impl AudioEngine {
                         let c = read_clip(&p);
                         clips
                             .lock()
-                            .insert(p.clone(), (c, std::time::Instant::now()));
+                            .insert(p.clone(), (c, web_time::Instant::now()));
                         loading.lock().remove(&p);
                     }
                 });
@@ -714,7 +714,7 @@ impl AudioEngine {
         if !self.enabled {
             let listener = self.shared.listener.lock().position;
             if let Some(v) = self.shared.voices.lock().iter_mut().find(|v| v.id == id) {
-                apply_params(v, params, std::time::Instant::now(), listener);
+                apply_params(v, params, web_time::Instant::now(), listener);
             }
             return;
         }
@@ -723,7 +723,7 @@ impl AudioEngine {
         if q.len() > 4096 {
             q.clear();
         }
-        q.push((id, params, std::time::Instant::now()));
+        q.push((id, params, web_time::Instant::now()));
     }
 
     /// What a voice plays with now, and how loud it arrives at the listener (gain after
@@ -806,7 +806,7 @@ mod tests {
         let clip = Arc::new(Clip { sample_rate: 48_000, channels: 1, samples: vec![16_384; 5] });
         let s = shared();
         s.voices.lock().push(voice(clip, 1.0));
-        s.updates.lock().push((1, VoiceParams { gain: 0.0, looping: true, ..Default::default() }, std::time::Instant::now()));
+        s.updates.lock().push((1, VoiceParams { gain: 0.0, looping: true, ..Default::default() }, web_time::Instant::now()));
         let mut out = vec![0.0f32; 4];
         s.render(&mut out);
         assert_eq!(s.voices.lock()[0].params.gain, 0.0);
@@ -818,7 +818,7 @@ mod tests {
         let clip = Arc::new(Clip { sample_rate: 48_000, channels: 1, samples: vec![0; 5] });
         let mut own = voice(clip.clone(), 1.0);
         let mut passing = voice(clip, 1.0);
-        let now = std::time::Instant::now();
+        let now = web_time::Instant::now();
         for (distance, elapsed) in [(2.0, 0), (2.2, 20)] {
             let at = now + std::time::Duration::from_millis(elapsed);
             let position = Some(Vec3::new(distance, 0.0, 0.0));
@@ -839,7 +839,7 @@ mod tests {
         }
         let before = e.device.borrow().clone();
         e.reopen.store(true, Ordering::Relaxed);
-        e.opened.set(std::time::Instant::now() - std::time::Duration::from_secs(2));
+        e.opened.set(web_time::Instant::now() - std::time::Duration::from_secs(2));
         e.follow_device();
         assert!(e.stream.borrow().is_some());
         assert_eq!(*e.device.borrow(), before);

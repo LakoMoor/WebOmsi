@@ -505,11 +505,11 @@ fn tree_signature(p: &Path) -> (u64, u64, u64) {
 fn watch_inbox(content: &Path) -> Vec<String> {
     struct Seen {
         sig: (u64, u64, u64),
-        at: std::time::Instant,
+        at: web_time::Instant,
         started: bool,
         /// When the signature was last read (a big folder whose install failed is looked
         /// at again only now and then).
-        checked: std::time::Instant,
+        checked: web_time::Instant,
     }
     static SEEN: std::sync::Mutex<Option<std::collections::HashMap<PathBuf, Seen>>> = std::sync::Mutex::new(None);
     // a mod deleted from Mods/installed is taken out of the lists (#819)
@@ -530,7 +530,7 @@ fn watch_inbox(content: &Path) -> Vec<String> {
         if install::is_busy(&p) {
             continue;
         }
-        let now = std::time::Instant::now();
+        let now = web_time::Instant::now();
         if seen.get(&p).map(|s| s.started && now.duration_since(s.checked) < std::time::Duration::from_secs(30)).unwrap_or(false) {
             continue;
         }
@@ -559,7 +559,7 @@ fn watch_inbox(content: &Path) -> Vec<String> {
             if seen.get(&p).map(|s| s.started && s.sig == sig).unwrap_or(false) {
                 continue;
             }
-            seen.insert(p.clone(), Seen { sig, at: std::time::Instant::now(), started: true, checked: std::time::Instant::now() });
+            seen.insert(p.clone(), Seen { sig, at: web_time::Instant::now(), started: true, checked: web_time::Instant::now() });
             install::start(content.to_path_buf(), root().ok(), p.clone(), install::InstallMode::Extract, true);
             started.push(p.to_string_lossy().to_string());
         }
@@ -575,7 +575,7 @@ pub fn install_inbox_blocking() -> Vec<install::Progress> {
     for p in inbox_entries(&content).into_iter().chain(install::waiting_ready(&content, root().ok().as_deref())) {
         let job = install::start(content.clone(), root().ok(), p, install::InstallMode::Auto, true);
         while job.snapshot().finished.is_none() {
-            std::thread::sleep(std::time::Duration::from_millis(50));
+            omsi_cfg::sleep(std::time::Duration::from_millis(50));
         }
         out.push(job.snapshot());
     }
@@ -842,7 +842,7 @@ fn log_line(line: &str) {
     use std::io::Write;
     let p = data_dir().join("launcher.log");
     if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(&p) {
-        let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0);
+        let now = web_time::SystemTime::now().duration_since(web_time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0);
         let _ = writeln!(f, "{now} {line}");
     }
 }
@@ -880,7 +880,7 @@ pub fn list_vehicles_progress(progress: impl Fn(&[VehicleInfo], usize, usize)) -
     let mut out = Vec::new();
     let total = folders.len();
     let mut done = 0;
-    let mut saved = std::time::Instant::now();
+    let mut saved = web_time::Instant::now();
     for (chunk, chunk_keys) in folders.chunks(32).zip(keys.chunks(32)) {
         let lists: Vec<Vec<VehicleInfo>> = match &pool {
             Some(pool) => pool.install(|| chunk.par_iter().zip(chunk_keys.par_iter()).map(|(f, k)| read(f, k)).collect()),
@@ -892,7 +892,7 @@ pub fn list_vehicles_progress(progress: impl Fn(&[VehicleInfo], usize, usize)) -
         // launcher closed) starts from there the next time
         if saved.elapsed().as_secs() >= 10 {
             index::save("bus4|", None);
-            saved = std::time::Instant::now();
+            saved = web_time::Instant::now();
         }
         progress(&batch, done, total);
         out.extend(batch);
@@ -2346,7 +2346,7 @@ mod save_slot_tests {
 
     #[test]
     fn the_slots_of_a_map_are_listed_by_their_names() {
-        let dir = std::env::temp_dir().join(format!("omsi_slots_{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("omsi_slots_{}", omsi_cfg::pid()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         // as the game writes them: UTF-16 with its mark
@@ -2498,7 +2498,7 @@ pub fn launch(d: &Duty) -> Result<Launched> {
         let command = args.join(" ");
         log_to_file(&format!("game in this process: {command}"));
         *IN_PROCESS.lock().unwrap_or_else(|e| e.into_inner()) = Some(args);
-        return Ok(Launched { pid: std::process::id(), log: data_dir().join("game.log").to_string_lossy().to_string(), command, others: 0 });
+        return Ok(Launched { pid: omsi_cfg::pid(), log: data_dir().join("game.log").to_string_lossy().to_string(), command, others: 0 });
     }
     let c = load_config();
     let game = find_game(&c.game).context("the game binary was not found (set it under Setup)")?;
@@ -2524,7 +2524,7 @@ pub fn log_to_file(line: &str) {
     use std::io::Write;
     let p = data_dir().join("launcher.log");
     if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(&p) {
-        let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0);
+        let now = web_time::SystemTime::now().duration_since(web_time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0);
         let _ = writeln!(f, "{now} {line}");
     }
 }
@@ -2540,7 +2540,7 @@ pub fn cleanup() {
 /// Native folder / file picker (Finder, Explorer, the GTK dialog) for a mod. Must run on
 /// the main thread. (None on a phone: the launcher browses the storage itself there.)
 pub fn pick_mod(zip: bool) -> Option<PathBuf> {
-    #[cfg(not(target_os = "android"))]
+    #[cfg(not(any(target_os = "android", target_arch = "wasm32")))]
     {
         if zip {
             rfd::FileDialog::new().set_title("Choose a mod archive").add_filter("Mod archive", &["zip", "7z", "rar"]).pick_file()
@@ -2548,7 +2548,7 @@ pub fn pick_mod(zip: bool) -> Option<PathBuf> {
             rfd::FileDialog::new().set_title("Choose the mod folder").pick_folder()
         }
     }
-    #[cfg(target_os = "android")]
+    #[cfg(any(target_os = "android", target_arch = "wasm32"))]
     {
         let _ = zip;
         None
@@ -2557,11 +2557,11 @@ pub fn pick_mod(zip: bool) -> Option<PathBuf> {
 
 /// Folder picker (Setup: the OMSI 2 folder).
 pub fn pick_folder(title: &str) -> Option<PathBuf> {
-    #[cfg(not(target_os = "android"))]
+    #[cfg(not(any(target_os = "android", target_arch = "wasm32")))]
     {
         rfd::FileDialog::new().set_title(title).pick_folder()
     }
-    #[cfg(target_os = "android")]
+    #[cfg(any(target_os = "android", target_arch = "wasm32"))]
     {
         let _ = title;
         None
@@ -2570,11 +2570,11 @@ pub fn pick_folder(title: &str) -> Option<PathBuf> {
 
 /// File picker (Setup: the game program).
 pub fn pick_file(title: &str) -> Option<PathBuf> {
-    #[cfg(not(target_os = "android"))]
+    #[cfg(not(any(target_os = "android", target_arch = "wasm32")))]
     {
         rfd::FileDialog::new().set_title(title).pick_file()
     }
-    #[cfg(target_os = "android")]
+    #[cfg(any(target_os = "android", target_arch = "wasm32"))]
     {
         let _ = title;
         None
@@ -2631,11 +2631,11 @@ pub fn cli(cmd: &str, arg: &str) -> Result<Value> {
             // {"watch": seconds}: keep polling like the page does (the inbox watcher needs
             // two looks), then wait for the installs it started
             let watch = a.get("watch").and_then(|v| v.as_f64()).unwrap_or(0.0);
-            let t0 = std::time::Instant::now();
+            let t0 = web_time::Instant::now();
             let mut stamps = vec![poll()?.stamp];
             let mut started = Vec::new();
             while t0.elapsed().as_secs_f64() < watch || install::jobs().iter().any(|j| j.finished.is_none()) {
-                std::thread::sleep(std::time::Duration::from_millis(1000));
+                omsi_cfg::sleep(std::time::Duration::from_millis(1000));
                 let p = poll()?;
                 started.extend(p.started);
                 if stamps.last() != Some(&p.stamp) {
@@ -2693,7 +2693,7 @@ mod tests {
 
     #[test]
     fn a_part_found_from_the_vehicle_folder_is_no_missing_pack() {
-        let root = std::env::temp_dir().join(format!("openomsi-packs-{}", std::process::id()));
+        let root = std::env::temp_dir().join(format!("openomsi-packs-{}", omsi_cfg::pid()));
         let obj = root.join("Sceneryobjects/X");
         let cfgs = root.join("Vehicles/B/model/Configuration Files");
         std::fs::create_dir_all(&obj).unwrap();
@@ -3067,7 +3067,7 @@ mod omsi_options_tests {
 
     #[test]
     fn the_real_time_reflections_are_read_as_omsi_writes_them() {
-        let root = std::env::temp_dir().join(format!("omsi-realrefl-{}", std::process::id()));
+        let root = std::env::temp_dir().join(format!("omsi-realrefl-{}", omsi_cfg::pid()));
         std::fs::create_dir_all(&root).unwrap();
         for (word, mode) in [("none", "off"), ("economy", "eco"), ("full", "full")] {
             std::fs::write(root.join("options.cfg"), format!("[performance_realreflexions]\r\n{word}\r\n\r\n[performance_reflTexSize]\r\n9\r\n")).unwrap();

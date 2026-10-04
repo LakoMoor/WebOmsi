@@ -870,6 +870,15 @@ pub fn original_keyboard_cfg(root: &Path) -> PathBuf {
 /// The essentials (see [`ORIGINAL_ESSENTIALS`]) that `root` lacks; empty for a complete
 /// original installation. openOMSI's content folder never counts as one.
 pub fn missing_original_essentials(root: &Path) -> Vec<String> {
+    // omsiweb fork: a trimmed private pack (one map, a few buses) made from the player's own
+    // OMSI 2 cannot hold the full essentials; `OMSI_TRIMMED_PACK=1` asks only for the folders
+    if cfg!(target_arch = "wasm32") || std::env::var_os("OMSI_TRIMMED_PACK").is_some_and(|v| v == "1") {
+        return ["maps", "Vehicles", "Sceneryobjects", "Texture"]
+            .iter()
+            .filter(|d| resolve_existing(root, &[d]).is_none())
+            .map(|s| s.to_string())
+            .collect();
+    }
     // (a folder with Omsi.exe in it is the game's, even marked: openOMSI unpacked into the OMSI
     // folder made it its content folder once - see `content_folder_of` - and every start after
     // that said the game was not there)
@@ -1016,7 +1025,7 @@ mod tests {
         assert!(is_programs_folder(Path::new("/Users/x/Applications")));
         assert!(!is_programs_folder(Path::new("/Users/x/Games/openOMSI")));
         // content an older version installed there stays in use
-        let dir = std::env::temp_dir().join(format!("omsi-apps-{}", std::process::id())).join("Applications");
+        let dir = std::env::temp_dir().join(format!("omsi-apps-{}", pid())).join("Applications");
         std::fs::create_dir_all(dir.join("Mods")).unwrap();
         std::fs::create_dir_all(dir.join("Vehicles")).unwrap();
         std::fs::create_dir_all(dir.join("maps").join("Grundorf")).unwrap();
@@ -1129,7 +1138,7 @@ mod tests {
         assert_eq!(windows_components("Folder.\\"), vec!["Folder"]);
         assert_eq!(windows_components("str_gehweg02.bmp "), vec!["str_gehweg02.bmp"]);
         assert_eq!(windows_components(""), Vec::<&str>::new());
-        let dir = std::env::temp_dir().join(format!("omsi-cfg-paths-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("omsi-cfg-paths-{}", pid()));
         std::fs::create_dir_all(dir.join("Texture").join("Bahn\u{fc}bergang")).unwrap();
         std::fs::write(dir.join("Texture").join("Bahn\u{fc}bergang").join("anz-oben.jpg"), b"x").unwrap();
         let p = resolve_path(&dir.join("model"), "..\\TEXTURE.\\BAHN\u{dc}BERGANG/Anz-Oben.JPG. ");
@@ -1189,4 +1198,24 @@ pub mod env {
             None => Err(std::env::VarError::NotPresent),
         }
     }
+}
+
+
+/// The process id (a page has none: 1).
+pub fn pid() -> u32 {
+    #[cfg(target_arch = "wasm32")]
+    {
+        1
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    std::process::id()
+}
+
+/// `std::thread::sleep`, except in a page, which cannot sleep (its frames are paced by the
+/// browser): there it returns at once.
+pub fn sleep(d: std::time::Duration) {
+    #[cfg(target_arch = "wasm32")]
+    let _ = d;
+    #[cfg(not(target_arch = "wasm32"))]
+    std::thread::sleep(d);
 }

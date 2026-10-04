@@ -147,7 +147,7 @@ impl Launcher {
     /// fingers over it zoom.
     pub(super) fn touch(&mut self, t: Touch, scale: f32) {
         let p = Vec2::new(t.location.x as f32, t.location.y as f32) / scale;
-        self.last_input = std::time::Instant::now();
+        self.last_input = web_time::Instant::now();
         self.ui.input.touch = true;
         match t.phase {
             TouchPhase::Started => {

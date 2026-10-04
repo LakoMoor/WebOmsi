@@ -36,7 +36,9 @@ struct ZipEntry {
 pub struct ZipArchive {
     /// The archive file, which is also the folder it is mounted as.
     path: PathBuf,
-    file: std::fs::File,
+    file: Option<std::fs::File>,
+    /// The whole archive in memory (the browser build: the pack is downloaded, not read from disk).
+    mem: Option<Arc<Vec<u8>>>,
     #[cfg(not(unix))]
     lock: std::sync::Mutex<()>,
     /// The archive's own folder that became the mount root (original spelling, `/` at the end
@@ -107,7 +109,18 @@ impl ZipArchive {
     pub fn open(path: &Path) -> io::Result<ZipArchive> {
         let file = std::fs::File::open(path)?;
         let len = file.metadata()?.len();
-        let archive = ZipArchive { path: path.to_path_buf(), file, #[cfg(not(unix))] lock: std::sync::Mutex::new(()), prefix: String::new(), entries: HashMap::new(), dirs: HashMap::new() };
+        Self::index(ZipArchive { path: path.to_path_buf(), file: Some(file), mem: None, #[cfg(not(unix))] lock: std::sync::Mutex::new(()), prefix: String::new(), entries: HashMap::new(), dirs: HashMap::new() }, len)
+    }
+
+    /// Read the central directory of an archive held in memory, mounted as the folder `path`.
+    pub fn open_memory(path: &Path, bytes: Arc<Vec<u8>>) -> io::Result<ZipArchive> {
+        let len = bytes.len() as u64;
+        Self::index(ZipArchive { path: path.to_path_buf(), file: None, mem: Some(bytes), #[cfg(not(unix))] lock: std::sync::Mutex::new(()), prefix: String::new(), entries: HashMap::new(), dirs: HashMap::new() }, len)
+    }
+
+    fn index(archive: ZipArchive, len: u64) -> io::Result<ZipArchive> {
+        let path = archive.path.clone();
+        let path = path.as_path();
         // end of central directory: the last 22 bytes plus a comment of up to 65 535
         let tail_len = len.min(22 + 65_535);
         let tail = archive.read_at(len - tail_len, tail_len as usize)?;
@@ -255,19 +268,27 @@ impl ZipArchive {
             .unwrap_or_default()
     }
 
+    fn read_mem(&self, offset: u64, len: usize) -> Option<io::Result<Vec<u8>>> {
+        let mem = self.mem.as_ref()?;
+        let (a, b) = (offset as usize, (offset as usize).saturating_add(len));
+        Some(mem.get(a..b).map(|s| s.to_vec()).ok_or_else(|| io::Error::from(io::ErrorKind::UnexpectedEof)))
+    }
+
     #[cfg(unix)]
     fn read_at(&self, offset: u64, len: usize) -> io::Result<Vec<u8>> {
         use std::os::unix::fs::FileExt;
+        if let Some(r) = self.read_mem(offset, len) { return r; }
         let mut buf = vec![0u8; len];
-        self.file.read_exact_at(&mut buf, offset)?;
+        self.file.as_ref().expect("file or memory").read_exact_at(&mut buf, offset)?;
         Ok(buf)
     }
 
     #[cfg(not(unix))]
     fn read_at(&self, offset: u64, len: usize) -> io::Result<Vec<u8>> {
         use std::io::Seek;
+        if let Some(r) = self.read_mem(offset, len) { return r; }
         let _g = self.lock.lock().unwrap();
-        let mut f = &self.file;
+        let mut f = self.file.as_ref().expect("file or memory");
         f.seek(io::SeekFrom::Start(offset))?;
         let mut buf = vec![0u8; len];
         f.read_exact(&mut buf)?;
@@ -344,12 +365,20 @@ pub fn mount_zip(path: &Path) -> io::Result<PathBuf> {
     if let Some(m) = MOUNTS.read().unwrap().iter().find(|m| m.path == path) {
         return Ok(m.path.clone());
     }
-    let t0 = std::time::Instant::now();
+    let t0 = web_time::Instant::now();
     let archive = ZipArchive::open(path)?;
     log::info!("zip {}: {} files ({:.1} GB unpacked) under '{}', indexed in {:.0} ms", path.display(), archive.file_count(), archive.total_size() as f64 / 1e9, archive.prefix, t0.elapsed().as_secs_f64() * 1000.0);
     if archive.prefix.is_empty() && !archive.dirs.get("").map(|l| l.iter().any(|(n, _)| crate::CONTENT_FOLDERS.iter().any(|f| f.eq_ignore_ascii_case(n)))).unwrap_or(false) {
         log::warn!("zip {}: no OMSI content folders (Vehicles, maps, Sceneryobjects ...) found; mounted as it is", path.display());
     }
+    let mount = archive.path.clone();
+    MOUNTS.write().unwrap().push(Arc::new(archive));
+    Ok(mount)
+}
+
+/// Mount an archive held in memory as the folder `path` (the browser build's pack).
+pub fn mount_zip_memory(path: &Path, bytes: Vec<u8>) -> io::Result<PathBuf> {
+    let archive = ZipArchive::open_memory(path, Arc::new(bytes))?;
     let mount = archive.path.clone();
     MOUNTS.write().unwrap().push(Arc::new(archive));
     Ok(mount)
@@ -573,8 +602,22 @@ mod tests {
     }
 
     #[test]
+    fn zip_mount_from_memory() {
+        let dir = std::env::temp_dir().join(format!("omsi-cfg-zipmem-{}", crate::pid()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let zip = dir.join("pack.zip");
+        build_zip(&zip);
+        let bytes = std::fs::read(&zip).unwrap();
+        let point = Path::new("/pack-in-memory.zip");
+        let mount = mount_zip_memory(point, bytes).unwrap();
+        let cfg = mount.join("MAPS").join("test map").join("Global.CFG");
+        assert!(is_file(&cfg));
+        assert_eq!(read(&cfg).unwrap(), b"[name]\r\nTest\r\n".repeat(20));
+    }
+
+    #[test]
     fn zip_mount() {
-        let dir = std::env::temp_dir().join(format!("omsi-cfg-zip-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("omsi-cfg-zip-{}", crate::pid()));
         std::fs::create_dir_all(&dir).unwrap();
         let zip = dir.join("pack.zip");
         build_zip(&zip);
@@ -625,7 +668,7 @@ mod tests {
     /// one of them falls back to the archives and roots after it, like any other archive.
     #[test]
     fn archive_inside_the_content_folder() {
-        let dir = std::env::temp_dir().join(format!("omsi-cfg-roots-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("omsi-cfg-roots-{}", crate::pid()));
         let content = dir.join("content");
         let install = dir.join("install");
         std::fs::create_dir_all(content.join("Archives")).unwrap();

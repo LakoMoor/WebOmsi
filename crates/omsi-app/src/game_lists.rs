@@ -2242,7 +2242,7 @@ pub(crate) fn options_tab(app: &App, title: &str) -> usize {
     pages_of(app, &ListKind::Options(0)).and_then(|(pages, _)| pages.iter().position(|p| p.0 == title)).unwrap_or(0)
 }
 
-type TitlesCache = Option<(ListKind, bool, std::time::Instant, (Vec<String>, usize))>;
+type TitlesCache = Option<(ListKind, bool, web_time::Instant, (Vec<String>, usize))>;
 
 thread_local! {
     static TITLES: std::cell::RefCell<TitlesCache> = const { std::cell::RefCell::new(None) };
@@ -2265,7 +2265,7 @@ pub(crate) fn page_titles(app: &App, kind: &ListKind) -> Option<(Vec<String>, us
     }
     let (pages, tab) = pages_of(app, kind)?;
     let r = (pages.iter().map(|p| p.0.to_string()).collect::<Vec<_>>(), tab);
-    TITLES.with(|c| *c.borrow_mut() = Some((kind.clone(), vr_nav_available, std::time::Instant::now(), r.clone())));
+    TITLES.with(|c| *c.borrow_mut() = Some((kind.clone(), vr_nav_available, web_time::Instant::now(), r.clone())));
     Some(r)
 }
 
@@ -2329,7 +2329,7 @@ fn natural(a: &str, b: &str) -> std::cmp::Ordering {
     key(a).cmp(&key(b))
 }
 
-static PENDING_SETTINGS: std::sync::Mutex<(Vec<(String, String)>, Option<std::time::Instant>)> =
+static PENDING_SETTINGS: std::sync::Mutex<(Vec<(String, String)>, Option<web_time::Instant>)> =
     std::sync::Mutex::new((Vec::new(), None));
 const SETTINGS_FLUSH_MS: u128 = 250;
 static SETTINGS_CACHE: std::sync::Mutex<Option<serde_json::Value>> = std::sync::Mutex::new(None);
@@ -2358,7 +2358,7 @@ pub(crate) fn flush_settings(force: bool) {
         if !force && p.1.is_some_and(|t| t.elapsed().as_millis() < SETTINGS_FLUSH_MS) {
             return;
         }
-        p.1 = Some(std::time::Instant::now());
+        p.1 = Some(web_time::Instant::now());
         std::mem::take(&mut p.0)
     };
     let Ok(mut v) = omsi_launcher_lib::get_settings() else { return };

@@ -1223,7 +1223,7 @@ impl Schedule {
         traffic: Option<&mut crate::traffic::Traffic>,
         day_time: f64,
     ) {
-        let t0 = std::time::Instant::now();
+        let t0 = web_time::Instant::now();
         let Some(t) = traffic else { return };
         let sets = self.upcoming_sets(world, t, day_time);
         // a few sets at a time: read on the workers, uploaded, and the copies let go
@@ -1234,7 +1234,7 @@ impl Schedule {
                 world.precache_vehicle(renderer, scene, ty, *scheme);
             }
         }
-        let t1 = std::time::Instant::now();
+        let t1 = web_time::Instant::now();
         let mut seen = std::collections::HashSet::new();
         for (ty, _, hof) in self.depots.values().flatten() {
             if !seen.insert(ty.def.path.clone()) {
@@ -1447,7 +1447,7 @@ impl Schedule {
         let ready = self.fleet_ready.lock().pop();
         if let Some(key) = ready {
             if let Some(ty) = self.fleet_reading.remove(&key) {
-                let t = std::time::Instant::now();
+                let t = web_time::Instant::now();
                 world.precache_vehicle(renderer, scene, &ty, key.1);
                 if omsi_cfg::env::var_os("OMSI_PROFILE").is_some() {
                     log::info!(
@@ -1497,7 +1497,7 @@ impl Schedule {
             self.fleet_reading.insert(key.clone(), ty.clone());
             let (p, ready) = (prefetch.clone(), self.fleet_ready.clone());
             // (off the frame's pool: see `threads`)
-            crate::threads::background_pool().spawn(move || {
+            crate::threads::spawn_background(move || {
                 p.prefetch(&ty, scheme);
                 ready.lock().push(key);
             });
@@ -2047,7 +2047,7 @@ impl Schedule {
         onto: Option<usize>,
     ) -> Placed {
         let profile = omsi_cfg::env::var_os("OMSI_PROFILE").is_some();
-        let t_spawn = std::time::Instant::now();
+        let t_spawn = web_time::Instant::now();
         let trip = &self.data.trips[self.departures[i].trip];
         let trip_name = trip.name.clone();
         // (the [station] records of a type-1 trip as well: Novi Sad's buses have no others,
@@ -4962,7 +4962,7 @@ mod tests {
         static NEXT: AtomicUsize = AtomicUsize::new(0);
         let dir = std::env::temp_dir().join(format!(
             "omsi_tt_restore_{}_{}",
-            std::process::id(),
+            omsi_cfg::pid(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
         std::fs::create_dir_all(&dir).unwrap();

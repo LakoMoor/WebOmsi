@@ -5,7 +5,7 @@ use super::*;
 /// CPU seconds this process has used so far (all threads), from `ps`.
 pub(crate) fn process_cpu_seconds() -> Option<f64> {
     let out = std::process::Command::new("ps")
-        .args(["-o", "cputime=", "-p", &std::process::id().to_string()])
+        .args(["-o", "cputime=", "-p", &omsi_cfg::pid().to_string()])
         .output()
         .ok()?;
     let text = String::from_utf8_lossy(&out.stdout);
@@ -152,6 +152,15 @@ pub(crate) fn find_root() -> Option<PathBuf> {
 
 /// Use the native supported API for both windowed and offscreen rendering.
 pub(crate) fn graphics_instance() -> wgpu::Instance {
+    // a page's graphics interface is made by `web::start` (it is asynchronous there)
+    #[cfg(target_arch = "wasm32")]
+    return crate::web::instance();
+    #[cfg(not(target_arch = "wasm32"))]
+    graphics_instance_native()
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn graphics_instance_native() -> wgpu::Instance {
     let mut descriptor = wgpu::InstanceDescriptor::new_without_display_handle();
     if crate::server::SERVER_MODE.load(std::sync::atomic::Ordering::Relaxed) {
         // the dedicated server draws nothing: wgpu's no-op device takes every call
@@ -235,6 +244,22 @@ fn backend_instance(b: wgpu::Backends) -> wgpu::Instance {
 /// can show the window is tried in turn - the card, then the processor's graphics - on
 /// Vulkan, DirectX 12 and OpenGL, and only when none opens is the game given up, saying so.
 pub(crate) fn window_renderer(
+    instance: &mut wgpu::Instance,
+    window: &std::sync::Arc<winit::window::Window>,
+    options: omsi_render::RenderOptions,
+) -> Result<Renderer> {
+    #[cfg(target_arch = "wasm32")]
+    {
+        let _ = (window, options);
+        *instance = crate::web::instance();
+        return crate::web::take_renderer().ok_or_else(|| anyhow!("the graphics device was not made before the window"));
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    window_renderer_native(instance, window, options)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn window_renderer_native(
     instance: &mut wgpu::Instance,
     window: &std::sync::Arc<winit::window::Window>,
     options: omsi_render::RenderOptions,

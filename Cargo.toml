@@ -22,6 +22,7 @@ members = [
     "crates/omsi-launcher-core",
     "crates/omsi-app",
     "tools/omsi-check",
+    "crates/ureq-web",
 ]
 exclude = ["launcher/src-tauri"]
 
@@ -66,3 +67,21 @@ opt-level = 1
 inherits = "release"
 debug = 0
 strip = "debuginfo"
+
+# the browser build: smaller than the desktop's (no debug info), still optimized
+[profile.web]
+inherits = "release"
+debug = false
+codegen-units = 16
+lto = false
+
+# quick browser builds for testing: every core, no link-time optimization
+[profile.web-dev]
+inherits = "web"
+lto = false
+codegen-units = 256
+incremental = true
+
+# wgpu with one change for browsers: an internal WebGPU error is reported, not a panic
+[patch.crates-io]
+wgpu = { path = "vendor/wgpu" }

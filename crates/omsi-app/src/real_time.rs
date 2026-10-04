@@ -6,7 +6,7 @@
 
 use omsi_sim::SimClock;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use web_time::{Duration, SystemTime, UNIX_EPOCH};
 
 /// The game was started on the real time (a duty must not move the clock then).
 static START_SYNCED: AtomicBool = AtomicBool::new(false);

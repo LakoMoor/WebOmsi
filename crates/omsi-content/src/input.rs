@@ -352,7 +352,7 @@ mod tests {
             ],
         };
         let path =
-            std::env::temp_dir().join(format!("omsi-keyboard-cfg-test-{}.cfg", std::process::id()));
+            std::env::temp_dir().join(format!("omsi-keyboard-cfg-test-{}.cfg", omsi_cfg::pid()));
         k.save(&path).unwrap();
         let back = KeyboardCfg::load(&path).unwrap();
         let _ = std::fs::remove_file(&path);

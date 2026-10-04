@@ -59,11 +59,11 @@ fn main() {
     }
     let mut rows: BTreeMap<String, Row> = BTreeMap::new();
     let mut worst: Vec<(f64, String)> = Vec::new();
-    let t_all = std::time::Instant::now();
+    let t_all = web_time::Instant::now();
     for p in &files {
         let Ok(bytes) = omsi_cfg::vfs::read(p) else { continue };
         let kind = if bytes.starts_with(b"DDS ") { format!("dds-{}", String::from_utf8_lossy(&bytes[84..88]).trim_matches(char::from(0))) } else { p.extension().unwrap().to_string_lossy().to_ascii_lowercase() };
-        let t = std::time::Instant::now();
+        let t = web_time::Instant::now();
         let Ok((data, info)) = load_gpu_bytes(&bytes, Path::new(p), o) else { continue };
         let secs = t.elapsed().as_secs_f64();
         let r = rows.entry(kind).or_default();

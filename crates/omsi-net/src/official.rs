@@ -8,7 +8,7 @@
 //! below and which is recent. Anybody can post to the topic, nobody else can sign: a forged
 //! address is never taken.
 
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use web_time::{Duration, SystemTime, UNIX_EPOCH};
 
 /// What a player types for the official server.
 pub const ALIAS: &str = "openomsi";

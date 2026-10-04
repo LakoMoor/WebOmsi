@@ -1,7 +1,7 @@
 use std::fs::{File, OpenOptions};
 use std::io::Write;
 use std::os::fd::AsRawFd;
-use std::time::{Duration, Instant};
+use web_time::{Duration, Instant};
 
 const EV_FF: u16 = 0x15;
 const FF_CONSTANT: usize = 0x52;

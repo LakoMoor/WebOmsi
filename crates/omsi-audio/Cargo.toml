@@ -16,7 +16,14 @@ log.workspace = true
 anyhow.workspace = true
 # internet radio: MP3 / AAC / Ogg streams over HTTP(S)
 symphonia = { version = "0.5", default-features = false, features = ["mp3", "aac", "ogg", "vorbis"] }
+web-time = "1"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 ureq = { version = "2", default-features = false, features = ["tls"] }
+
+# the browser build plays through Web Audio
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+cpal = { version = "0.15", features = ["wasm-bindgen"] }
 
 [dev-dependencies]
 env_logger.workspace = true
