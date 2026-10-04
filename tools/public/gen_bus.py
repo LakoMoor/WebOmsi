@@ -1,4 +1,4 @@
-"""The public pack's buses: three original two-axle buses (a city bus, a minibus, a long bus)
+"""The public pack's buses: four original two-axle buses (a city bus, a minibus, a long bus, a double-decker)
 sharing one drive/brake script. Everything is generated here."""
 import math, os
 from lib import *
@@ -12,6 +12,7 @@ VARIANTS = {
     'city': ('Demo City Bus', 10.6, 2.5, 3.0, (236, 190, 40), (190, 40, 36), 10.5, 170),
     'mini': ('Demo Minibus', 7.4, 2.2, 2.7, (52, 110, 190), (240, 240, 244), 5.2, 110),
     'long': ('Demo Long Bus', 12.2, 2.55, 3.05, (60, 150, 90), (245, 245, 245), 12.5, 210),
+    'double': ('Demo Double-Decker', 10.4, 2.5, 4.25, (196, 38, 42), (238, 228, 196), 13.0, 190),
 }
 
 # -------------------------------------------------------------------------- textures
@@ -35,6 +36,15 @@ def textures(key, body, stripe):
     png(V('Texture', 'demo_seat.png'), 32, 32, lambda x, y: (46, 76, 140))
     png(V('Texture', 'demo_dash.png'), 64, 64, lambda x, y: (38, 40, 44))
     png(V('Texture', 'demo_wheel.png'), 32, 32, lambda x, y: (24, 24, 26))
+    png(V('Texture', 'demo_light.png'), 8, 8, lambda x, y: (255, 244, 200))
+    png(V('Texture', 'demo_tail.png'), 8, 8, lambda x, y: (200, 20, 20))
+    png(V('Texture', 'demo_bumper.png'), 8, 8, lambda x, y: (50, 52, 58))
+    png(V('Texture', 'demo_door.png'), 32, 64, lambda x, y: (40, 62, 82) if 2 < x < 29 and 2 < y < 61 and abs(x - 15.5) > 0.8 else (30, 32, 36))
+    def dest(x, y):
+        # a dark roller sign with amber dots standing for the destination
+        on = 6 < y < 26 and (x // 3) % 2 == 0 and (x * 7 + y * 3) % 5 < 4 and 6 < x < 120
+        return (255, 170, 40) if on else (20, 20, 24)
+    png(V('Texture', 'demo_dest.png'), 128, 32, dest)
     png(V('Texture', 'demo_glass.png'), 8, 8, lambda x, y: (140, 180, 200, 60), alpha=True)
 
 # -------------------------------------------------------------------------- body
@@ -43,20 +53,26 @@ def thin(m, x0, y0, z0, x1, y1, z1, mat, scale=0.25):
     m.box(x0, y0, z0, x1, y1, z1, mat, scale)
 
 
-def body_mesh(key, L, W, H, pax_rows, axles=()):
+def body_mesh(key, L, W, H, pax_rows, axles=(), levels=1):
     m = Mesh()
     paint = m.material(f'demo_paint_{key}.png')
     inside = m.material('demo_inside.png')
     floor = m.material('demo_floor.png')
     seat = m.material('demo_seat.png')
     dash = m.material('demo_dash.png')
+    light = m.material('demo_light.png', emissive=(0.6, 0.58, 0.45))
+    tail = m.material('demo_tail.png', emissive=(0.5, 0.05, 0.05))
+    bump = m.material('demo_bumper.png')
+    door = m.material('demo_door.png')
+    destm = m.material('demo_dest.png', emissive=(0.35, 0.22, 0.05))
     t = 0.07
     fz = 0.55                      # floor height
     hw, hl = W / 2, L / 2
     sill, head = 1.10, 2.25        # window band
+    top = 2.35 if levels == 2 else H   # the lower deck's ceiling
     # floor and roof
     thin(m, -hw, fz - t, -hl, hw, fz, hl, floor)
-    thin(m, -hw, H - t, -hl, hw, H, hl, paint)
+    thin(m, -hw, top - t, -hl, hw, top, hl, paint)
     # underbody skirt, open at the wheels
     cuts = sorted(axles)
     start = -hl
@@ -74,13 +90,13 @@ def body_mesh(key, L, W, H, pax_rows, axles=()):
     for side in (-1, 1):
         x0, x1 = (side * (hw - t), side * hw) if side > 0 else (side * hw, side * (hw - t))
         thin(m, x0, fz, -hl, x1, sill, hl, paint)
-        thin(m, x0, head, -hl, x1, H, hl, paint)
+        thin(m, x0, head, -hl, x1, top, hl, paint)
         for pz in pillars:
             thin(m, x0, sill, pz - 0.05, x1, head, pz + 0.05, paint)
     # rear wall (solid) and front wall (a windscreen opening)
-    thin(m, -hw, fz, -hl, hw, H, -hl + t, paint)
+    thin(m, -hw, fz, -hl, hw, top, -hl + t, paint)
     thin(m, -hw, fz, hl - t, hw, sill - 0.05, hl, paint)
-    thin(m, -hw, head + 0.1, hl - t, hw, H, hl, paint)
+    thin(m, -hw, head + 0.1, hl - t, hw, top, hl, paint)
     for px in (-hw, -hw / 3, hw / 3, hw - 0.06):
         thin(m, px, sill - 0.05, hl - t, px + 0.06, head + 0.1, hl, paint)
     # the driver's place: seat, dashboard, steering wheel column
@@ -96,6 +112,42 @@ def body_mesh(key, L, W, H, pax_rows, axles=()):
             thin(m, x, fz, z, x + 0.4, fz + 0.45, z + 0.45, seat)
             thin(m, x, fz + 0.45, z - 0.06, x + 0.4, fz + 1.0, z + 0.02, seat)
         z += (L - 2.8) / max(pax_rows, 1)
+    if levels == 2:
+        # the upper deck: floor over the saloon (not over the cab), belt, windows, roof, seats
+        uf, usill, uhead = top, 2.95, 3.95
+        zc = hl - 2.3
+        thin(m, -hw, uf, -hl, hw, uf + t, zc, floor)
+        thin(m, -hw, H - t, -hl, hw, H, hl - 0.4, paint)
+        up = [-hl + 0.1 + i * ((L - 2.9) / (pax_rows + 1)) for i in range(pax_rows + 2)]
+        for side in (-1, 1):
+            x0, x1 = (side * (hw - t), side * hw) if side > 0 else (side * hw, side * (hw - t))
+            thin(m, x0, uf, -hl, x1, usill, zc + 0.1, paint)
+            thin(m, x0, uhead, -hl, x1, H, zc + 0.1, paint)
+            for pz in up:
+                thin(m, x0, usill, pz - 0.05, x1, uhead, pz + 0.05, paint)
+        thin(m, -hw, uf, -hl, hw, H, -hl + t, paint)
+        thin(m, -hw, uf, zc, hw, H, zc + 0.1, paint)
+        z = -hl + 0.7
+        for _ in range(pax_rows):
+            for x in (-hw + 0.1, hw - 0.5, -hw + 0.55, hw - 0.95):
+                thin(m, x, uf + t, z, x + 0.4, uf + t + 0.45, z + 0.45, seat)
+                thin(m, x, uf + t + 0.45, z - 0.06, x + 0.4, uf + t + 1.0, z + 0.02, seat)
+            z += (L - 3.6) / max(pax_rows, 1)
+    # outside details: lights, bumpers, mirrors, destination sign, doors
+    for sx in (-1, 1):
+        thin(m, sx * (hw - 0.55) - 0.16, 0.62, hl, sx * (hw - 0.55) + 0.16, 0.8, hl + 0.04, light)
+        thin(m, sx * (hw - 0.3) - 0.1, 0.62, -hl - 0.04, sx * (hw - 0.3) + 0.1, 0.95, -hl, tail)
+        # mirror arm and mirror
+        mx0, mx1 = (hw, hw + 0.32) if sx > 0 else (-hw - 0.32, -hw)
+        thin(m, mx0, 1.65, hl - 0.55, mx1, 1.7, hl - 0.5, bump)
+        a, b = (hw + 0.3, hw + 0.36) if sx > 0 else (-hw - 0.36, -hw - 0.3)
+        thin(m, a, 1.35, hl - 0.6, b, 1.95, hl - 0.4, bump)
+    thin(m, -hw, 0.32, hl, hw, 0.6, hl + 0.14, bump)
+    thin(m, -hw, 0.32, -hl - 0.12, hw, 0.6, -hl, bump)
+    thin(m, -hw + 0.2, head + 0.12, hl, hw - 0.2, head + 0.12 + 0.28, hl + 0.03, destm)
+    # doors on the right: front and middle, a dark glazed leaf over the wall
+    for dz0 in (hl - 1.65, -0.5):
+        thin(m, hw, fz + 0.05, dz0, hw + 0.03, head - 0.05, dz0 + 1.0, door)
     return m
 
 
@@ -119,10 +171,10 @@ body.o3d
 def bus_files(key):
     name, L, W, H, body, stripe, mass, kw = VARIANTS[key]
     textures(key, body, stripe)
-    rows = 5 if key == 'city' else (3 if key == 'mini' else 6)
+    rows = {'city': 5, 'mini': 3, 'long': 6, 'double': 4}[key]
     hl = L / 2
     front, rear = hl - 1.55, -(hl - 2.4)          # axle positions (forward)
-    body_mesh(key, L, W, H, rows, axles=(front, rear)).save(V('Model', key, 'body.o3d'))
+    body_mesh(key, L, W, H, rows, axles=(front, rear), levels=2 if key == 'double' else 1).save(V('Model', key, 'body.o3d'))
     r = 0.5
     wheels = []
     hubs = {}

@@ -29,6 +29,15 @@
       "stripe": "#f5f5f5",
       "length": 12.2,
       "kw": 210
+    },
+    {
+      "file": "Vehicles/DemoBus/demo_double.bus",
+      "name": "Double-decker",
+      "info": "Two decks, 8 seat rows",
+      "color": "#c4262a",
+      "stripe": "#eee4c4",
+      "length": 10.4,
+      "kw": 190
     }
   ],
   "servers": []
