@@ -84,7 +84,7 @@ fn err(e: impl std::fmt::Display) -> JsValue {
 /// Called once by the page: `args` is the game's command line without the program name
 /// (`--map maps/Grundorf/global.cfg --bus Vehicles/MB_O305/O305_E2H_84.bus --lan-join wss://…`).
 #[wasm_bindgen]
-pub async fn start(canvas_id: String, pack: js_sys::Uint8Array, args: Vec<String>, quality: Option<String>) -> Result<(), JsValue> {
+pub async fn start(canvas_id: String, pack: js_sys::Uint8Array, args: Vec<String>, quality: Option<String>, extras: Option<js_sys::Array>) -> Result<(), JsValue> {
     console_error_panic_hook::set_once();
     LOW_QUALITY.store(quality.as_deref() == Some("low"), std::sync::atomic::Ordering::Relaxed);
     let _ = console_log::init_with_level(log::Level::Info);
@@ -103,6 +103,21 @@ pub async fn start(canvas_id: String, pack: js_sys::Uint8Array, args: Vec<String
     log::info!("pack: {:.1} MB", bytes.len() as f64 / 1e6);
     let root = PathBuf::from(PACK_ROOT);
     omsi_cfg::vfs::mount_zip_memory(&root, bytes).map_err(err)?;
+    // the player's own zips, laid over the pack like mods: each is mounted as a folder of its
+    // own and named to the game as `--content-zip` (it takes the wrapper folder of a download
+    // - `OMSI 2/Vehicles/...` - as the root by itself)
+    let mut extra_args: Vec<String> = Vec::new();
+    if let Some(list) = extras {
+        for (i, item) in list.iter().enumerate() {
+            let Ok(zip) = item.dyn_into::<js_sys::Uint8Array>() else { continue };
+            let at = format!("/mods/extra{i}.zip");
+            log::info!("your files #{i}: {:.1} MB", zip.length() as f64 / 1e6);
+            omsi_cfg::vfs::mount_zip_memory(std::path::Path::new(&at), zip.to_vec())
+                .map_err(|e| err(format!("your zip #{}: {e}", i + 1)))?;
+            extra_args.push("--content-zip".into());
+            extra_args.push(at);
+        }
+    }
 
     // the graphics device
     let instance = browser_instance();
@@ -114,6 +129,7 @@ pub async fn start(canvas_id: String, pack: js_sys::Uint8Array, args: Vec<String
 
     // the command line
     let mut argv = vec!["openomsi".to_string(), "--root".into(), PACK_ROOT.into()];
+    argv.extend(extra_args);
     argv.extend(args);
     let args = Args::try_parse_from(argv).map_err(err)?;
     let Some((args, server_cfg)) = crate::prepare(args, false).map_err(err)? else { return Ok(()) };

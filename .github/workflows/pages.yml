@@ -68,7 +68,7 @@ jobs:
       - name: Assemble the site
         run: |
           mkdir -p _site/engine/docs _site/engine/assets
-          cp web/index.html web/main.js web/style.css web/icon.svg web/config.json web/.nojekyll web/demo-pack.zip _site/
+          cp web/index.html web/main.js web/zipscan.js web/style.css web/icon.svg web/config.json web/.nojekyll web/demo-pack.zip _site/
           cp -R web/pkg _site/pkg
           cp -R site/. _site/engine/
           cp docs/*.md _site/engine/docs/

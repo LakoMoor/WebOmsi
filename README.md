@@ -102,18 +102,26 @@ players (a page served over https needs a `wss://` address, and a tunnel gives o
 
 <br clear="right">
 
-## Your own OMSI 2 content
+## Your own files
 
-The engine plays the maps and buses of OMSI 2 and its mods. That content is not ours to give away, so it is never
-part of the site. If you own OMSI 2 you can play it in your own browser:
+The start screen has a section **Your own files**: drop in zip files with a map, a bus, scenery or a whole OMSI folder,
+and they are played together with the built-in game. The page reads each zip and lists the maps and buses it finds;
+the files stay in your browser's own storage and are never uploaded.
 
-1. make a pack (a zip with the folders `maps`, `Vehicles`, `Sceneryobjects`, `Splines`, `Texture`… of the map and
-   buses you want; the [`tools`](tools) show how a pack can be trimmed from 8 GB to a few hundred MB),
-2. open the page with `?config=config-omsi.json` (copy [`web/config-omsi.json`](web/config-omsi.json) next to it
-   and name your map and buses), and choose the zip once: it stays in the browser's own storage and is never sent
-   anywhere.
+<img src="docs/webomsi/menu-phone.png" width="260" align="right" alt="The start screen on a phone">
 
-Please do not publish OMSI 2's files. WebOmsi is not affiliated with the makers of OMSI 2.
+* a mod **as you downloaded it** works unchanged, also inside a wrapper folder such as `OMSI 2/Vehicles/...`;
+* the game sees all your zips as one folder, so a map zip and a bus zip can be separate files;
+* a bus that borrows scripts or textures of another add-on needs that add-on in a zip too.
+
+[**Step-by-step guide →**](docs/webomsi/own-content.md) (what a zip may hold, how to cut a small zip out of your OMSI 2 with
+[`tools/pack/make_pack.py`](tools/pack/make_pack.py), size limits, what the console messages mean).
+
+OMSI 2's own files and most mods are not ours to give away, so they are never part of this site: please add only
+content you have the right to use, and do not publish OMSI 2's files. WebOmsi is not affiliated with the makers of
+OMSI 2.
+
+<br clear="right">
 
 ## Build it yourself
 

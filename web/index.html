@@ -28,6 +28,14 @@
     <button id="help-close" class="btn secondary" data-i18n="close">Close</button>
   </div>
 </div>
+<div id="own-help" class="sheet" hidden>
+  <div class="sheet-card wide">
+    <h2 data-i18n="how_title">Playing with your own files</h2>
+    <div id="own-help-body" class="guide"></div>
+    <a class="btn secondary" id="guide-link" target="_blank" rel="noopener" data-i18n="guide_full">Full guide on GitHub</a>
+    <button id="own-help-close" class="btn secondary" data-i18n="close">Close</button>
+  </div>
+</div>
 <div id="rotate" hidden><div><span>↻</span><p data-i18n="rotate">Turn your phone sideways</p></div></div>
 <div id="toast" class="toast" hidden></div>
 
@@ -58,6 +66,23 @@
     <h3 data-i18n="pick_bus">Choose a bus</h3>
     <div id="buses" class="buses"></div>
 
+    <div class="field" id="map-field" hidden>
+      <label for="map" data-i18n="map">Map</label>
+      <select id="map"></select>
+    </div>
+
+    <details class="own" id="own">
+      <summary><span data-i18n="own_title">Your own files</span> <span id="own-count" class="badge" hidden></span></summary>
+      <p class="muted" data-i18n="own_lead">Add a zip with a map, a bus or a whole OMSI folder. It stays in your browser.</p>
+      <label id="drop" class="drop" for="ownfile">
+        <b data-i18n="own_drop">Drop zip files here or tap to choose</b>
+        <span data-i18n="own_hint">maps, buses, mods; several files at once</span>
+      </label>
+      <input id="ownfile" type="file" accept=".zip,application/zip" multiple hidden>
+      <ul id="own-list" class="own-list"></ul>
+      <button id="own-how" class="link" data-i18n="own_how">How do I make a zip?</button>
+    </details>
+
     <div class="row">
       <div class="field">
         <label for="name" data-i18n="name">Your name</label>
@@ -76,12 +101,6 @@
       <label for="server" data-i18n="server">Server address</label>
       <input id="server" type="text" placeholder="wss://….trycloudflare.com/ws" autocapitalize="off" autocorrect="off" spellcheck="false">
       <div id="server-list" class="chips"></div>
-    </div>
-
-    <div id="packbox" hidden>
-      <label class="btn secondary" for="packfile" data-i18n="pick_pack">Choose pack.zip…</label>
-      <input id="packfile" type="file" accept=".zip" hidden>
-      <small data-i18n="pack_note">The pack is made from your own copy of OMSI 2 and stays in your browser.</small>
     </div>
 
     <button id="go" class="btn primary" data-i18n="play">Play</button>

@@ -114,3 +114,24 @@ footer a:hover, button.link:hover { color: var(--fg); }
 body.touch .only-kbd, body:not(.touch) .only-touch { display: none; }
 @media (prefers-reduced-motion: reduce) { .road i, .drive-bus, .track.busy i { animation: none; } }
 @media (max-height: 560px) { .drive-bus, .sun { display: none; } .panel { padding: 16px; } }
+
+/* ---- your own files ------------------------------------------------------------------------------ */
+details.own { margin-top: 16px; border: 1px solid var(--line); border-radius: var(--r); padding: 10px 14px; background: #12161c; }
+details.own summary { cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.badge { background: var(--accent); color: #1a1006; border-radius: 99px; font-size: 11px; font-weight: 800; padding: 1px 8px; }
+.muted { color: var(--muted); font-size: 13px; margin: 8px 0; }
+.drop { display: grid; gap: 2px; place-items: center; text-align: center; border: 2px dashed #3a4350; border-radius: var(--r); padding: 18px 12px; cursor: pointer; color: var(--fg); margin: 0; transition: border-color .15s, background .15s; }
+.drop span { color: var(--muted); font-size: 12px; }
+.drop:hover, .drop.over { border-color: var(--accent); background: #2a1d1314; }
+.own-list { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 6px; }
+.own-list li { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; align-items: center; background: #0d1015; border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; }
+.own-list li b { font-size: 13.5px; word-break: break-all; }
+.own-list li small { grid-column: 1; color: var(--muted); font-size: 12px; }
+.own-list li button { grid-row: 1 / span 2; grid-column: 2; background: #2a1c1e; color: #ffb4b4; border: 1px solid #5a2a2e; border-radius: 8px; width: 30px; height: 30px; cursor: pointer; }
+.own-list li.bad { border-color: #6b2a2e; }
+details.own .link { margin-top: 10px; font-size: 13px; }
+.sheet-card.wide { width: min(100%, 640px); }
+.guide { color: var(--fg); font-size: 14px; }
+.guide ol { padding-left: 20px; } .guide li { margin: 6px 0; } .guide code { background: #262d38; padding: 1px 6px; border-radius: 5px; font-size: 12.5px; }
+.guide h4 { margin: 14px 0 4px; font-size: 14px; } .guide p { margin: 6px 0; color: var(--muted); }
+a.btn { text-decoration: none; }
