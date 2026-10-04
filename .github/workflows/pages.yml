@@ -48,7 +48,18 @@ jobs:
       - name: wasm-bindgen
         run: command -v wasm-bindgen || cargo +"$TOOLCHAIN" install wasm-bindgen-cli --version 0.2.128 --locked
 
+      # the engine is one big crate: the runner's 7 GB are not enough without swap
+      - name: Swap
+        run: |
+          sudo fallocate -l 12G /mnt/swapfile
+          sudo chmod 600 /mnt/swapfile
+          sudo mkswap /mnt/swapfile
+          sudo swapon /mnt/swapfile
+          free -h
+
       - name: Build the game for the browser
+        env:
+          JOBS: "2"
         run: ./build-web.sh web
 
       - name: The demo pack (original content, generated)
