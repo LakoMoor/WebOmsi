@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="theme-color" content="#0e1116">
+<meta name="theme-color" content="#f5a31b">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="description" content="WebOmsi: a bus simulator that runs in your browser. Multiplayer, touch controls, no install.">
@@ -21,60 +21,29 @@
   <button id="b-fs" data-i18n-title="fullscreen" title="Full screen">⛶</button>
   <button id="b-exit" data-i18n-title="exit" title="Back to menu">✕</button>
 </div>
+
+<!-- dialogs -->
 <div id="help" class="sheet" hidden>
   <div class="sheet-card">
     <h2 data-i18n="controls">Controls</h2>
     <div class="only-kbd" id="help-kbd"></div>
     <div class="only-touch" id="help-touch"></div>
-    <button id="help-close" class="btn secondary" data-i18n="close">Close</button>
+    <button id="help-close" class="btn" data-i18n="close">Close</button>
   </div>
 </div>
 <div id="own-help" class="sheet" hidden>
   <div class="sheet-card wide">
     <h2 data-i18n="how_title">Playing with your own files</h2>
     <div id="own-help-body" class="guide"></div>
-    <a class="btn secondary" id="guide-link" target="_blank" rel="noopener" data-i18n="guide_full">Full guide on GitHub</a>
-    <button id="own-help-close" class="btn secondary" data-i18n="close">Close</button>
+    <a class="btn" id="guide-link" target="_blank" rel="noopener" data-i18n="guide_full">Full guide on GitHub</a>
+    <button id="own-help-close" class="btn" data-i18n="close">Close</button>
   </div>
 </div>
-<div id="rotate" hidden><div><span>↻</span><p data-i18n="rotate">Turn your phone sideways</p></div></div>
-<div id="toast" class="toast" hidden></div>
-
-<!-- start screen -->
-<main id="menu">
-  <div class="scenery" aria-hidden="true">
-    <div class="sun"></div>
-    <svg class="hills" viewBox="0 0 1200 300" preserveAspectRatio="none"><path d="M0 220 Q 200 120 420 200 T 820 170 T 1200 200 V300 H0Z" fill="#14301f"/><path d="M0 260 Q 260 190 520 250 T 1200 240 V300 H0Z" fill="#0f2418"/></svg>
-    <div class="road"><i></i><i></i><i></i><i></i><i></i></div>
-    <div class="drive-bus" id="art-bus"></div>
-  </div>
-
-  <section class="panel" id="panel">
-    <div class="titlebar"><span data-i18n="menu_title">WebOmsi - Main menu</span><span class="tb-dots" aria-hidden="true"><i></i><i></i><i></i></span></div>
-    <header class="brand">
-      <div class="logo"><svg viewBox="0 0 48 48"><rect x="4" y="10" width="40" height="26" rx="6" fill="#fff"/><rect x="8" y="15" width="32" height="10" rx="2" fill="#f47f30"/><circle cx="15" cy="38" r="4.5" fill="#14171c" stroke="#fff" stroke-width="2"/><circle cx="33" cy="38" r="4.5" fill="#14171c" stroke="#fff" stroke-width="2"/></svg></div>
-      <div>
-        <h1>Web<b>Omsi</b></h1>
-        <p id="subtitle" data-i18n="tagline">A bus simulator in your browser</p>
-      </div>
-      <span class="chips-right"><button id="theme" class="chip" title="Theme">Modern</button><button id="lang" class="chip" title="Language">RU</button></span>
-    </header>
-
-    <div class="seg" role="tablist">
-      <button id="tab-solo" class="on" role="tab" data-i18n="solo">Single player</button>
-      <button id="tab-multi" role="tab" data-i18n="multi">Multiplayer</button>
-    </div>
-
-    <h3 data-i18n="pick_bus">Choose a bus</h3>
-    <div id="buses" class="buses"></div>
-
-    <div class="field" id="map-field" hidden>
-      <label for="map" data-i18n="map">Map</label>
-      <select id="map"></select>
-    </div>
-
-    <details class="own" id="own">
-      <summary><span data-i18n="own_title">Your own files</span> <span id="own-count" class="badge" hidden></span></summary>
+<div id="own-sheet" class="sheet" hidden>
+  <div class="sheet-card wide">
+    <h2 data-i18n="own_title">Your own files</h2>
+    <details class="own" id="own" open>
+      <summary hidden><span data-i18n="own_title">Your own files</span> <span id="own-count" class="badge" hidden></span></summary>
       <p class="muted" data-i18n="own_lead">Add a zip with a map, a bus or a whole OMSI folder. It stays in your browser.</p>
       <label id="drop" class="drop" for="ownfile">
         <b data-i18n="own_drop2">Drop zip files or a folder here, or tap to choose</b>
@@ -82,79 +51,135 @@
       </label>
       <input id="ownfile" type="file" accept=".zip,application/zip" multiple hidden>
       <input id="ownfolder" type="file" webkitdirectory multiple hidden>
-      <label class="chip folderbtn" for="ownfolder" data-i18n="pick_folder">Choose a folder</label>
+      <label class="btn small" for="ownfolder" data-i18n="pick_folder">Choose a folder</label>
       <ul id="own-list" class="own-list"></ul>
       <button id="own-how" class="link" data-i18n="own_how">How do I make a zip?</button>
     </details>
+    <button id="own-close" class="btn" data-i18n="close">Close</button>
+  </div>
+</div>
+<div id="opts-sheet" class="sheet" hidden>
+  <div class="sheet-card">
+    <h2 data-i18n="options">Options</h2>
+    <label data-i18n="language">Language</label>
+    <div class="radios"><button id="lang-en" class="radio">English</button><button id="lang-ru" class="radio">Русский</button></div>
+    <label for="quality" data-i18n="quality">Graphics</label>
+    <select id="quality">
+      <option value="high" data-i18n="q_high">High</option>
+      <option value="low" data-i18n="q_low">Light</option>
+    </select>
+    <p class="links">
+      <a href="https://github.com/LakoMoor/WebOmsi" target="_blank" rel="noopener">GitHub</a> ·
+      <a href="engine/" data-i18n="engine">About the engine</a>
+      <span id="forget-sep" hidden> · </span><button id="forget" class="link" hidden data-i18n="forget">Clear saved files</button>
+    </p>
+    <button id="opts-close" class="btn" data-i18n="close">Close</button>
+  </div>
+</div>
+<div id="rotate" hidden><div><span>↻</span><p data-i18n="rotate">Turn your phone sideways</p></div></div>
+<div id="toast" class="toast" hidden></div>
 
-    <div class="row">
-      <div class="field">
-        <label for="name" data-i18n="name">Your name</label>
+<!-- the start screen: panels in a grid, as in the simulators' own menus -->
+<main id="menu">
+  <div class="window" id="panel">
+
+    <section class="cell c-logo">
+      <div class="wordmark" aria-label="WebOmsi"><span class="w">Web</span><span class="o">Omsi</span><svg class="two" viewBox="0 0 40 44" aria-hidden="true"><rect x="3" y="7" width="34" height="23" rx="5" fill="#2b2a28"/><rect x="7" y="11" width="26" height="9" rx="2" fill="#f5a31b"/><circle cx="12" cy="33" r="5" fill="#2b2a28" stroke="#f5a31b" stroke-width="2"/><circle cx="28" cy="33" r="5" fill="#2b2a28" stroke="#f5a31b" stroke-width="2"/></svg></div>
+      <div class="build"><span data-i18n="build">Build</span> <span id="build">web</span><br><span id="subtitle" data-i18n="tagline">A bus simulator in your browser</span></div>
+    </section>
+
+    <section class="cell c-map">
+      <label for="map" data-i18n="cur_map">Current map:</label>
+      <select id="map"></select>
+      <div class="radios stack" role="tablist">
+        <button id="tab-solo" class="radio on" role="tab" data-i18n="solo">Single player</button>
+        <button id="tab-multi" class="radio" role="tab" data-i18n="multi">Multiplayer</button>
+      </div>
+    </section>
+
+    <section class="cell c-driver">
+      <svg class="avatar" viewBox="0 0 96 110" aria-hidden="true">
+        <rect width="96" height="110" fill="#fbb84a"/>
+        <path d="M10 110c2-26 16-36 38-36s36 10 38 36z" fill="#2f3e57"/>
+        <rect x="40" y="62" width="16" height="14" fill="#e7b48c"/>
+        <ellipse cx="48" cy="46" rx="21" ry="25" fill="#f1c29b"/>
+        <path d="M24 38c0-20 14-26 24-26s24 6 24 26c-6-9-14-12-24-12s-18 3-24 12z" fill="#2b2a28"/>
+        <rect x="20" y="30" width="56" height="7" rx="3" fill="#2b2a28"/>
+        <circle cx="40" cy="47" r="2.4" fill="#2b2a28"/><circle cx="56" cy="47" r="2.4" fill="#2b2a28"/>
+        <path d="M40 58q8 6 16 0" stroke="#7a3f2a" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+      </svg>
+      <div class="driver-fields">
+        <label for="name" data-i18n="cur_driver">Current driver:</label>
         <input id="name" type="text" maxlength="24" autocomplete="nickname" data-i18n-ph="name_ph" placeholder="Driver">
       </div>
-      <div class="field">
-        <label for="quality" data-i18n="quality">Graphics</label>
-        <select id="quality">
-          <option value="high" data-i18n="q_high">High</option>
-          <option value="low" data-i18n="q_low">Light</option>
-        </select>
-      </div>
-    </div>
+    </section>
 
-    <div id="multi" hidden>
-      <div class="seg small" id="mp-mode" role="tablist">
-        <button data-mode="public" class="on" data-i18n="mp_public">Public</button>
-        <button data-mode="join" data-i18n="mp_join">By code</button>
-        <button data-mode="host" data-i18n="mp_host">Host a room</button>
-        <button data-mode="server" data-i18n="mp_server">Server</button>
-      </div>
-      <div id="mp-public" class="field">
-        <ul id="lobby-list" class="lobby"></ul>
-        <p class="muted" id="lobby-empty" data-i18n="pub_empty">Nobody is hosting right now. Host a room (and list it) or join by code.</p>
-        <p class="muted small" data-i18n="pub_note">The list is made by the hosts themselves and is not checked: join people you trust.</p>
-      </div>
-      <div id="mp-join" class="field" hidden>
-        <label for="room" data-i18n="room_code">Room code</label>
-        <input id="room" type="text" maxlength="12" placeholder="ABC234" autocapitalize="characters" autocorrect="off" spellcheck="false" class="code">
-        <p class="muted" data-i18n="join_note">Ask the host for the code or the invite link.</p>
-      </div>
-      <div id="mp-host" class="field" hidden>
-        <label data-i18n="your_room">Your room</label>
-        <div class="roombox"><b id="room-new" class="code">------</b><button id="room-copy" class="chip" data-i18n="copy_link">Copy invite link</button><button id="room-again" class="chip" title="New code">↻</button></div>
-        <label class="check"><input id="room-public" type="checkbox"> <span data-i18n="list_public">Show my room in the public list</span></label>
-        <input id="room-name" type="text" maxlength="32" data-i18n-ph="room_name_ph" placeholder="Room name" hidden>
-        <p class="muted" data-i18n="host_note">Your browser is the server: friends join with the code. Keep this tab open and visible while you play.</p>
-      </div>
-      <div id="mp-server" class="field" hidden>
-        <label for="server" data-i18n="server">Server address</label>
-        <input id="server" type="text" placeholder="wss://….trycloudflare.com/ws" autocapitalize="off" autocorrect="off" spellcheck="false">
-        <div id="server-list" class="chips"></div>
-      </div>
-    </div>
+    <section class="cell c-bus">
+      <label data-i18n="vehicle">Vehicle:</label>
+      <div id="buses" class="buses"></div>
+    </section>
 
-    <button id="go" class="btn primary" data-i18n="play">Play</button>
+    <section class="cell c-picture">
+      <div id="art-bus" class="picture"></div>
+      <div id="bus-caption" class="caption"></div>
+    </section>
 
-    <div id="progress" hidden>
+    <section class="cell c-info-bus">
+      <label data-i18n="info_bus">Information about the chosen vehicle:</label>
+      <div id="info-bus" class="infobox"></div>
+    </section>
+
+    <section class="cell c-info-map">
+      <div id="solo-info">
+        <label data-i18n="info_map">Information about the chosen map:</label>
+        <div id="info-map" class="infobox"></div>
+      </div>
+      <div id="multi" hidden>
+        <div class="radios" id="mp-mode" role="tablist">
+          <button data-mode="public" class="radio on" data-i18n="mp_public">Public</button>
+          <button data-mode="join" class="radio" data-i18n="mp_join">By code</button>
+          <button data-mode="host" class="radio" data-i18n="mp_host">Host a room</button>
+          <button data-mode="server" class="radio" data-i18n="mp_server">Server</button>
+        </div>
+        <div id="mp-public" class="mp">
+          <ul id="lobby-list" class="lobby"></ul>
+          <p class="muted" id="lobby-empty" data-i18n="pub_empty">Nobody is hosting right now. Host a room (and list it) or join by code.</p>
+          <p class="muted small" data-i18n="pub_note">The list is made by the hosts themselves and is not checked: join people you trust.</p>
+        </div>
+        <div id="mp-join" class="mp" hidden>
+          <label for="room" data-i18n="room_code">Room code</label>
+          <input id="room" type="text" maxlength="12" placeholder="ABC234" autocapitalize="characters" autocorrect="off" spellcheck="false" class="code">
+          <p class="muted" data-i18n="join_note">Ask the host for the code or the invite link.</p>
+        </div>
+        <div id="mp-host" class="mp" hidden>
+          <label data-i18n="your_room">Your room</label>
+          <div class="roombox"><b id="room-new" class="code">------</b><button id="room-copy" class="btn small" data-i18n="copy_link">Copy invite link</button><button id="room-again" class="btn small" title="New code">↻</button></div>
+          <label class="check"><input id="room-public" type="checkbox"> <span data-i18n="list_public">Show my room in the public list</span></label>
+          <input id="room-name" type="text" maxlength="32" data-i18n-ph="room_name_ph" placeholder="Room name" hidden>
+          <p class="muted" data-i18n="host_note">Your browser is the server: friends join with the code. Keep this tab open and visible while you play.</p>
+        </div>
+        <div id="mp-server" class="mp" hidden>
+          <label for="server" data-i18n="server">Server address</label>
+          <input id="server" type="text" placeholder="wss://….trycloudflare.com/ws" autocapitalize="off" autocorrect="off" spellcheck="false">
+          <div id="server-list" class="chips"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="cell c-progress" id="progress" hidden>
       <div class="track" id="track"><i id="fill"></i></div>
       <ol id="steps"></ol>
       <p id="status" class="status"></p>
-    </div>
+    </section>
     <p id="error" class="error" hidden></p>
 
-    <details class="how">
-      <summary data-i18n="controls">Controls</summary>
-      <div class="only-kbd" id="how-kbd"></div>
-      <div class="only-touch" id="how-touch"></div>
-    </details>
-
-    <footer>
-      <a href="https://github.com/LakoMoor/WebOmsi" target="_blank" rel="noopener">GitHub</a>
-      <span>·</span>
-      <a href="engine/" data-i18n="engine">About the engine</a>
-      <span id="forget-sep" hidden>·</span>
-      <button id="forget" class="link" hidden data-i18n="forget">Clear saved files</button>
-    </footer>
-  </section>
+    <nav class="menubar">
+      <button id="go" class="start" data-i18n="play">Start!</button>
+      <button id="btn-own" data-i18n="btn_own">Your files</button>
+      <button id="btn-help" data-i18n="controls">Controls</button>
+      <button id="btn-opts" data-i18n="options">Options</button>
+    </nav>
+  </div>
 </main>
 <script type="module" src="./main.js"></script>
 </body>

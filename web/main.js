@@ -30,7 +30,7 @@ const T = {
   en: {
     tagline: 'A bus simulator in your browser', solo: 'Single player', multi: 'Multiplayer', pick_bus: 'Choose a bus',
     name: 'Your name', name_ph: 'Driver', quality: 'Graphics', q_high: 'High', q_low: 'Light (weaker devices)',
-    server: 'Server address', play: 'Play', controls: 'Controls', close: 'Close', engine: 'About the engine',
+    server: 'Server address', play: 'Start!', controls: 'Controls', close: 'Close', engine: 'About the engine',
     forget: 'Clear saved files', pick_pack: 'Choose pack.zip…', rotate: 'Turn your phone sideways',
     pack_note: 'The pack is made from your own copy of OMSI 2 and stays in your browser.',
     help: 'Controls', fullscreen: 'Full screen', exit: 'Back to menu',
@@ -66,13 +66,15 @@ const T = {
     mp_public: 'Public', pub_empty: 'Nobody is hosting right now. Host a room (and list it) or join by code.', pub_note: 'The list is made by the hosts themselves and is not checked: join people you trust.',
     list_public: 'Show my room in the public list', room_name_ph: 'Room name', join_btn: 'Join', kind_room: 'browser room', kind_server: 'server', verified: 'official',
     files_n2: 'Files', loading_files: 'Downloading the game files', pick_folder: 'Choose a folder', own_drop2: 'Drop zip files or a folder here, or tap to choose', building: 'Putting the files together…', theme_classic: 'Classic', theme_modern: 'Modern', menu_title: 'WebOmsi - Main menu',
+    cur_map: 'Current map:', cur_driver: 'Current driver:', vehicle: 'Vehicle:', info_bus: 'Information about the chosen vehicle:', info_map: 'Information about the chosen map:',
+    build: 'Build', language: 'Language', options: 'Options', btn_own: 'Your files', from_files: 'From your files', map_from: 'A map from your files', spec_len: 'Length', spec_power: 'Power', pick_public: 'Pick a room or a server in the list, or choose another way to join.',
     kb: [['W / S', 'gas / brake'], ['A / D', 'steering'], ['Space', 'parking brake'], ['Shift+U', 'start the bus'], ['Shift+1', 'doors'], ['H', 'horn'], ['Z / X / C', 'indicators / hazards'], ['F1', 'cameras'], ['Esc', 'game menu'], ['Mouse', 'look round, press cab buttons']],
     ts: [['Wheel', 'drag the steering wheel, left'], ['Pedals', 'BRAKE and GAS, right'], ['R N D', 'gearbox buttons'], ['P', 'parking brake'], ['Finger', 'look round; two fingers zoom']],
   },
   ru: {
     tagline: 'Автобусный симулятор в браузере', solo: 'Одиночная игра', multi: 'Мультиплеер', pick_bus: 'Выберите автобус',
     name: 'Ваше имя', name_ph: 'Водитель', quality: 'Графика', q_high: 'Высокая', q_low: 'Лёгкая (слабые устройства)',
-    server: 'Адрес сервера', play: 'Играть', controls: 'Управление', close: 'Закрыть', engine: 'О движке',
+    server: 'Адрес сервера', play: 'Старт!', controls: 'Управление', close: 'Закрыть', engine: 'О движке',
     forget: 'Удалить сохранённые файлы', pick_pack: 'Выбрать pack.zip…', rotate: 'Поверните телефон горизонтально',
     pack_note: 'Пак делается из вашей копии OMSI 2 и остаётся в браузере.',
     help: 'Управление', fullscreen: 'На весь экран', exit: 'В меню',
@@ -108,6 +110,8 @@ const T = {
     mp_public: 'Публичные', pub_empty: 'Сейчас никто не хостит. Создайте комнату (и покажите её в списке) или войдите по коду.', pub_note: 'Список составляют сами хосты, он не проверяется: заходите к тем, кому доверяете.',
     list_public: 'Показывать мою комнату в публичном списке', room_name_ph: 'Название комнаты', join_btn: 'Войти', kind_room: 'комната в браузере', kind_server: 'сервер', verified: 'официальный',
     files_n2: 'Файлы', loading_files: 'Загрузка файлов игры', pick_folder: 'Выбрать папку', own_drop2: 'Перетащите сюда zip или папку, либо нажмите и выберите', building: 'Собираю файлы вместе…', theme_classic: 'Классика', theme_modern: 'Современный', menu_title: 'WebOmsi - Главное меню',
+    cur_map: 'Текущая карта:', cur_driver: 'Текущий водитель:', vehicle: 'Автобус:', info_bus: 'Информация о выбранном автобусе:', info_map: 'Информация о выбранной карте:',
+    build: 'Сборка', language: 'Язык', options: 'Настройки', btn_own: 'Свои файлы', from_files: 'Из ваших файлов', map_from: 'Карта из ваших файлов', spec_len: 'Длина', spec_power: 'Мощность', pick_public: 'Выберите комнату или сервер в списке либо другой способ входа.',
     kb: [['W / S', 'газ / тормоз'], ['A / D', 'руль'], ['Space', 'стояночный тормоз'], ['Shift+U', 'запустить автобус'], ['Shift+1', 'двери'], ['H', 'гудок'], ['Z / X / C', 'поворотники / аварийка'], ['F1', 'камеры'], ['Esc', 'меню игры'], ['Мышь', 'осмотреться, нажимать кнопки кабины']],
     ts: [['Руль', 'ведите по рулю, слева'], ['Педали', 'BRAKE и GAS, справа'], ['R N D', 'кнопки коробки передач'], ['P', 'стояночный тормоз'], ['Палец', 'осмотреться; двумя пальцами - приблизить']],
   },
@@ -129,29 +133,21 @@ function keysTable(rows) {
   }
   return d;
 }
-// the look: the classic one (in the manner of OMSI 2's menus) or the modern one
-let theme = localStorage.getItem('omsi.theme') || 'classic';
-function applyTheme() {
-  document.body.classList.toggle('classic', theme === 'classic');
-  $('theme').textContent = theme === 'classic' ? t('theme_modern') : t('theme_classic');
-  document.querySelector('meta[name=theme-color]').content = theme === 'classic' ? '#1b2a44' : '#0e1116';
-}
-$('theme').addEventListener('click', () => { theme = theme === 'classic' ? 'modern' : 'classic'; localStorage.setItem('omsi.theme', theme); applyTheme(); });
 function applyLang() {
   document.documentElement.lang = lang;
   document.querySelectorAll('[data-i18n]').forEach((e) => { e.textContent = t(e.dataset.i18n); });
   document.querySelectorAll('[data-i18n-ph]').forEach((e) => { e.placeholder = t(e.dataset.i18nPh); });
   document.querySelectorAll('[data-i18n-title]').forEach((e) => { e.title = t(e.dataset.i18nTitle); });
-  $('lang').textContent = lang === 'ru' ? 'EN' : 'RU';
-  applyTheme();
-  for (const id of ['how-kbd', 'help-kbd']) $(id).replaceChildren(keysTable(T[lang].kb));
-  for (const id of ['how-touch', 'help-touch']) $(id).replaceChildren(keysTable(T[lang].ts));
-  if (config.title) $('subtitle').textContent = t('tagline') + ' · ' + config.title;
+  $('lang-en').classList.toggle('on', lang === 'en'); $('lang-ru').classList.toggle('on', lang === 'ru');
+  $('help-kbd').replaceChildren(keysTable(T[lang].kb));
+  $('help-touch').replaceChildren(keysTable(T[lang].ts));
+  $('build').textContent = config.title || 'web';
+  showMap(); showBus();
   renderSteps(currentStep);
   renderServers();
   renderBuses();
 }
-$('lang').addEventListener('click', () => { lang = lang === 'ru' ? 'en' : 'ru'; localStorage.setItem('omsi.lang', lang); applyLang(); });
+for (const l of ['en', 'ru']) $('lang-' + l).addEventListener('click', () => { lang = l; localStorage.setItem('omsi.lang', lang); applyLang(); });
 
 // ---- configuration -----------------------------------------------------------------------------
 // config.json (next to this page): { packUrl, map, title, buses: [{file, name, info, color, stripe, length, kw}], servers: [] }
@@ -196,16 +192,34 @@ const allBuses = () => [
   ...mods.flatMap((m) => m.buses.map((b) => ({ file: b.file, name: b.label, info: m.name, color: '#9aa5b1', stripe: '#3d4652', length: 11, custom: true }))),
 ];
 const first = baseBuses[0] || {};
-const artOf = (b) => $('art-bus').replaceChildren(busArt((b || first).color, (b || first).stripe, (b || first).length || 10.6));
+const pick = (v) => (v && typeof v === 'object' ? (v[lang] || v.en || '') : (v || ''));
+function showBus(b) {
+  b = b || allBuses().find((x) => x.file === chosen) || first;
+  if (!b || !b.file) return;
+  $('art-bus').replaceChildren(busArt(b.color, b.stripe, b.length || 10.6));
+  const cap = document.createElement('div'); cap.textContent = b.name;
+  const small = document.createElement('small'); small.textContent = b.info || '';
+  $('bus-caption').replaceChildren(cap, small);
+  const lines = [pick(b.desc)];
+  if (b.custom) lines.push(`${t('from_files')}: ${b.info}`);
+  if (b.length && !b.custom) lines.push(`${t('spec_len')}: ${b.length} ${t('len')}`);
+  if (b.kw) lines.push(`${t('spec_power')}: ${b.kw} ${t('kw')}`);
+  $('info-bus').textContent = lines.filter(Boolean).join('\n');
+}
+function showMap() {
+  const sel = $('map');
+  const label = sel.selectedOptions[0] ? sel.selectedOptions[0].textContent : '';
+  $('info-map').textContent = (!sel.value || sel.value === MAP) ? pick(config.mapInfo) : `${t('map_from')}: ${label}`;
+}
 let chosen = params.get('bus') || localStorage.getItem('omsi.bus') || first.file;
 function renderBuses() {
   const buses = allBuses();
   if (!buses.some((b) => b.file === chosen)) chosen = (buses[0] || {}).file;
-  artOf(buses.find((b) => b.file === chosen));
+  showBus(buses.find((b) => b.file === chosen));
   $('buses').replaceChildren(...buses.map((b) => {
     const label = document.createElement('label'); label.className = 'bus';
     const input = Object.assign(document.createElement('input'), { type: 'radio', name: 'bus', value: b.file, checked: b.file === chosen });
-    input.addEventListener('change', () => { chosen = b.file; artOf(b); });
+    input.addEventListener('change', () => { chosen = b.file; showBus(b); });
     const text = document.createElement('div');
     const name = document.createElement('b'); name.textContent = b.name;
     const info = document.createElement('span'); info.className = 'info'; info.textContent = b.info || '';
@@ -223,21 +237,22 @@ function renderBuses() {
 $('name').value = localStorage.getItem('omsi.name') || '';
 $('server').value = params.get('server') || localStorage.getItem('omsi.server') || '';
 $('quality').value = params.get('quality') || localStorage.getItem('omsi.quality') || (touchDevice ? 'low' : 'high');
+$('map').addEventListener('change', () => showMap());
 function renderMaps() {
   const sel = $('map');
   const opts = [{ v: MAP, l: config.title || MAP }, ...mods.flatMap((m) => m.maps.map((x) => ({ v: x.file, l: `${x.name} · ${m.name}` })))];
   const want = params.get('map') || localStorage.getItem('omsi.map') || MAP;
   sel.replaceChildren(...opts.map((o) => Object.assign(document.createElement('option'), { value: o.v, textContent: o.l })));
   sel.value = opts.some((o) => o.v === want) ? want : MAP;
-  $('map-field').hidden = opts.length < 2;
+  showMap();
 }
 let mpMode = params.get('server') ? 'server' : (params.get('room') ? 'join' : 'public');
 let multi = !!params.get('server') || !!params.get('room');
-// the Play button: always, except on the public list (it has a Join button on every line)
-function updateGo() { $('go').hidden = multi && mpMode === 'public'; }
+// Start!: on the public list it only reminds to pick a line (every line has its own Join button)
+function updateGo() { $('go').classList.toggle('dim', multi && mpMode === 'public'); }
 function setMode(m) {
   multi = m; $('tab-solo').classList.toggle('on', !m); $('tab-multi').classList.toggle('on', m);
-  $('multi').hidden = !m;
+  $('multi').hidden = !m; $('solo-info').hidden = m;
   updateGo();
   if (m && mpMode === 'public') watchLobby();
 }
@@ -418,15 +433,15 @@ function renderMods() {
     li.append(name, small, x); return li;
   }));
   const n = mods.length; $('own-count').hidden = !n; $('own-count').textContent = n;
-  if (n) $('own').open = true;
 }
+function showOwn() { $('own-sheet').hidden = false; }
 $('ownfile').addEventListener('change', (e) => { addFiles([...e.target.files]); e.target.value = ''; });
 $('ownfolder').addEventListener('change', (e) => {
   const list = [...e.target.files].map((f) => ({ name: f.webkitRelativePath || f.name, file: f }));
   const label = (list[0] && list[0].name.split('/')[0]) || 'folder';
   e.target.value = ''; addLoose(list, label);
 });
-for (const ev of ['dragenter', 'dragover']) document.addEventListener(ev, (e) => { if (e.dataTransfer && [...e.dataTransfer.types].includes('Files')) { e.preventDefault(); $('own').open = true; $('drop').classList.add('over'); } });
+for (const ev of ['dragenter', 'dragover']) document.addEventListener(ev, (e) => { if (e.dataTransfer && [...e.dataTransfer.types].includes('Files')) { e.preventDefault(); showOwn(); $('drop').classList.add('over'); } });
 for (const ev of ['dragleave', 'drop']) document.addEventListener(ev, (e) => { if (ev === 'dragleave' && e.relatedTarget) return; $('drop').classList.remove('over'); });
 document.addEventListener('drop', async (e) => {
   if (!e.dataTransfer || !e.dataTransfer.files.length) return;
@@ -483,7 +498,7 @@ async function getPack() {
     } else if (extras.length) {
       base = extras.shift();
     } else {
-      $('own').open = true;
+      showOwn();
       throw new Error(t('no_base'));
     }
   }
@@ -528,6 +543,12 @@ $('b-help').addEventListener('click', () => { $('help').hidden = false; });
 $('help-close').addEventListener('click', () => { $('help').hidden = true; $('game').focus(); });
 $('b-exit').addEventListener('click', () => { if (confirm(t('confirm_exit'))) location.reload(); });
 document.addEventListener('contextmenu', (e) => e.preventDefault());
+// the buttons of the start screen
+$('btn-own').addEventListener('click', showOwn);
+$('own-close').addEventListener('click', () => { $('own-sheet').hidden = true; });
+$('btn-help').addEventListener('click', () => { $('help').hidden = false; });
+$('btn-opts').addEventListener('click', () => { $('opts-sheet').hidden = false; });
+$('opts-close').addEventListener('click', () => { $('opts-sheet').hidden = true; });
 addEventListener('resize', () => { const c = $('game'); c.style.width = innerWidth + 'px'; c.style.height = innerHeight + 'px'; });
 
 // ---- start -------------------------------------------------------------------------------------------------------
@@ -538,7 +559,7 @@ async function play() {
   const mode = multi ? mpMode : 'solo';
   const server = mode === 'server' ? $('server').value.trim() : '';
   const code = rtc.cleanCode($('room').value);
-  if (mode === 'public') return;
+  if (mode === 'public') { toast(t('pick_public'), 3500); return; }
   if (mode === 'join' && code.length < 4) { fail(t('e_code')); return; }
   const name = $('name').value.trim();
   const quality = $('quality').value;
