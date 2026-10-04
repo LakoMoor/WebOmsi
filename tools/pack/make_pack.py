@@ -26,7 +26,20 @@ for d, _, fs in os.walk(R):
         p = os.path.join(rel, f).replace('\\', '/').lstrip('./')
         idx[p.lower()] = p
 
-tok = re.compile(rb'[A-Za-z0-9_ ./\\()+-]+\.(?:sco|sli|o3d|bmp|dds|tga|jpg|jpeg|png|cfg|map|rdy|wav|ogg|scr|osc|ovh|bus|lst|txt|ini|hum|fnt|tex)', re.I)
+tok = re.compile(rb'[A-Za-z0-9_ ./\\()+-]+\.(?:sco|sli|o3d|x|bmp|dds|tga|jpg|jpeg|png|cfg|cti|map|rdy|wav|ogg|scr|osc|ovh|bus|lst|txt|ini|hum|fnt|tex|opl|oft)', re.I)
+
+
+# every file by its bare name, to find what a file names without a folder (a texture of a
+# bus is often written as `Texture\\x.tga`, a sound as `sound\\y.wav`, from the bus's folder)
+byname = {}
+for p_ in idx.values():
+    byname.setdefault(os.path.basename(p_).lower(), []).append(p_)
+
+
+def home(p):
+    """The folder an add-on keeps its things in: Vehicles/<Name>, Sceneryobjects/<Name>, Splines/<Name>."""
+    parts = p.split('/')
+    return '/'.join(parts[:2]) if len(parts) > 2 and parts[0].lower() in ('vehicles', 'sceneryobjects', 'splines', 'maps') else ''
 
 
 def find(ref, bases):
@@ -50,10 +63,19 @@ def closure(seeds):
             except OSError:
                 continue
             d = os.path.dirname(p)
+            h = home(p)
             for m in tok.finditer(data):
-                r = find(m.group(0), [d, d + '/model', d + '/texture', os.path.dirname(d) + '/texture'])
-                if r and r not in seen:
-                    todo.append(r)
+                name = m.group(0)
+                r = find(name, [d, d + '/model', d + '/texture', os.path.dirname(d) + '/texture'] + ([h, h + '/texture', h + '/sound', h + '/model'] if h else []) + ['Texture', 'Sounds'])
+                if r:
+                    if r not in seen:
+                        todo.append(r)
+                elif h:
+                    # not where it is said to be: the same name anywhere in the add-on's own folder
+                    base = os.path.basename(name.decode('latin1').replace('\\', '/').strip()).lower()
+                    for c in byname.get(base, []):
+                        if c.startswith(h + '/') and c not in seen:
+                            todo.append(c)
     return seen
 
 

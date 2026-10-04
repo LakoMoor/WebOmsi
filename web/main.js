@@ -1,4 +1,19 @@
 Error.stackTraceLimit = 80;
+// Sound: a browser starts an audio context paused unless it is made right at a click, and the
+// game makes its own after the files are loaded. Every context is remembered here and woken at the
+// first key, tap or click (and again whenever the tab comes back).
+const audioContexts = [];
+{
+  const Native = window.AudioContext || window.webkitAudioContext;
+  if (Native) {
+    window.AudioContext = class extends Native { constructor(...a) { super(...a); audioContexts.push(this); } };
+    if (window.webkitAudioContext) window.webkitAudioContext = window.AudioContext;
+  }
+  const wake = () => audioContexts.forEach((c) => { if (c.state !== 'running' && c.state !== 'closed') c.resume().catch(() => {}); });
+  for (const ev of ['pointerdown', 'keydown', 'touchstart', 'click']) addEventListener(ev, wake, { capture: true });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) wake(); });
+  setInterval(wake, 1500);              // a paused context is woken as soon as the browser allows
+}
 // The page. It finds the game's pack (cached in the browser, downloaded, or picked from the
 // player's disk), then hands it to the game. Every path is relative: the page works from
 // any folder, for example https://<user>.github.io/<repo>/.
