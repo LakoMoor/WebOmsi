@@ -1,0 +1,6 @@
+[const]
+max_torque
+6760
+[const]
+power_w
+110000

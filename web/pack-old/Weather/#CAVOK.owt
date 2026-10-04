@@ -1,0 +1,23 @@
+Weather file of the openOMSI public pack
+[name]
+<Clear>
+[description]
+A clear sky, good visibility, no wind.
+[end]
+[fog]
+50000
+1
+[wind]
+0
+0
+[temp]
+15
+5
+[press]
+1013
+[clouds]
+-1
+0
+[precip]
+0
+32

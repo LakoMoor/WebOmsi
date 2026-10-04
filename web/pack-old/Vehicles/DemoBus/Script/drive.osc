@@ -1,0 +1,43 @@
+'Drive and brake of the openOMSI public pack's buses (original work).
+'Automatic gearbox: the driven wheels get the engine's power curve, limited by a maximum
+'torque; R selects reverse, D drive. The service brake is the Brake pedal, the parking brake
+'a switch.
+
+{init}
+	1 (S.L.gear)
+	0 (S.L.parking_brake)
+{end}
+
+{trigger:parking_brake_toggle}
+	(L.L.parking_brake) ! (S.L.parking_brake)
+{end}
+
+{trigger:automatic_D}
+	1 (S.L.gear)
+{end}
+
+{trigger:automatic_R}
+	-1 (S.L.gear)
+{end}
+
+{trigger:automatic_N}
+	0 (S.L.gear)
+{end}
+
+{frame}
+	' wheel speed in rad/s, at least 1 so that the power curve does not divide by zero
+	(L.L.n_Wheel) abs 0.10472 * 1 max (S.L.w_wheel)
+
+	' torque at the driven wheels: min(maximum, power / speed) * throttle * gear
+	(C.L.power_w) (L.L.w_wheel) /
+	(C.L.max_torque) min
+	(L.L.Throttle) *
+	(L.L.gear) *
+	(L.L.parking_brake) ! *
+	(S.L.M_Wheel)
+
+	' brakes: pedal, and the parking brake (the whole vehicle, in N)
+	(L.L.Brake) 62000 *
+	(L.L.parking_brake) 45000 * +
+	(S.L.Brakeforce)
+{end}
